@@ -13,9 +13,19 @@ import { getUserFromToken } from './auth/google.js';
 const PORT = process.env.PORT || 3001;
 
 // Parse CORS origins (supports comma-separated list)
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
-    .split(',')
-    .map(origin => origin.trim());
+// Always include production frontend and localhost
+const defaultOrigins = [
+    'https://blades-frontend.onrender.com',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000'
+];
+const envOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : [];
+const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
+console.log('Allowed CORS origins:', allowedOrigins);
 
 // Express app for HTTP routes
 const app = express();
@@ -28,6 +38,7 @@ app.use(cors({
             callback(null, true);
         } else {
             console.log('Blocked by CORS:', origin);
+            console.log('Allowed origins are:', allowedOrigins);
             callback(new Error('Not allowed by CORS'));
         }
     },
