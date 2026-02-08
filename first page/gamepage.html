@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blades of the fallen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="game.css">
+</head>
+<body>
+   <audio id="bg-audio" autoplay muted loop>
+   <source src="firstpage.ogg">
+  Your browser does not support the audio element.
+</audio> 
+
+    <div class="button-container">
+    <img src="logo2.png" id="logo">
+    <button id="btn">Play</button>
+    <button id="btn2">Contact</button>
+    </div>
+    <div id="popupOverlay">
+  <div id="popup">
+    <button id="closePopup">&times;</button>
+    <h2>Connect with me</h2>
+    <a href="https://www.linkedin.com/in/priyam-kathuria-17954a307?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" style="color: red; font-size: 1.5rem; text-decoration: none;">LinkedIn</a>
+  </div>
+</div>
+
+
+<video id="bgVideo" autoplay muted loop playsinline 
+style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -1;">
+<source src="page.mp4" type="video/mp4">
+Your browser does not support the video tag.
+</video>
+
+<script src="game.js"></script>
+<!-- <script src="shared_music.js"></script> -->
+</body>
+</html>

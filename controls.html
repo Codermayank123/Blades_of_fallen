@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="controls.css">
+</head>
+<body>
+    <div class="controls">
+    <!-- Player 1 -->
+    <div class="control-section">
+      <h2>Player 1 Controls</h2>
+      <div class="keys">
+        <div class="key">W</div>
+        <div class="key">A</div>
+        <div class="key">D</div>
+        <div class="key">␣</div>
+      </div>
+      <div class="desc">
+        W = Jump<br>
+        A / D = Move<br>
+        Space = Attack
+      </div>
+    </div>
+
+    <!-- Player 2 -->
+    <div class="control-section">
+      <h2>Player 2 Controls</h2>
+      <div class="keys">
+        <div class="key">↑</div>
+        <div class="key">←</div>
+        <div class="key">→</div>
+        <div class="key">↓</div>
+      </div>
+      <div class="desc">
+        ↑ = Jump<br>
+        ← / → = Move<br>
+        ↓ = Attack
+      </div>
+    </div>
+  </div>
+  <div class="char">
+    <video id="char" src="char.mp4" autoplay playsinline muted loop></video>
+  </div>
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const body = document.body;
+
+  // Fade in on load
+  body.classList.add('loaded');
+
+  // Trigger fade-out after 10 seconds
+  setTimeout(() => {
+    body.classList.add('fade-out');
+
+    // Redirect after fade-out completes
+    setTimeout(() => {
+      window.location.href = 'index2.html';
+    }, 1000); // match CSS transition time
+  }, 10000);
+});
+
+
+  </script>
+</body>
+</html>

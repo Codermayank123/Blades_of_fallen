@@ -1,0 +1,81 @@
+/* Page base */
+html, body {
+  background: black;
+  color: white;
+  font-family: 'Cinzel', serif;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* Smooth fade animations using transition */
+body {
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+/* Fade in on load */
+body.loaded {
+  opacity: 1;
+}
+
+/* Fade out before redirect */
+body.fade-out {
+  opacity: 0;
+}
+
+/* Controls layout */
+.controls {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.control-section {
+  text-align: center;
+}
+
+.control-section h2 {
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+  color: #0ff;
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  gap: 15px;
+  justify-content: center;
+}
+
+.key {
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid #0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border-radius: 10px;
+  text-shadow: 0 0 10px #0ff;
+}
+
+.desc {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+/* Character video */
+#char {
+  z-index: 1000;
+  height: 200px;
+  width: 200px;
+  position: relative;
+  bottom: 15rem;
+  left: 90rem;
+}

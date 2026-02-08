@@ -1,0 +1,193 @@
+
+.button-container {
+    position: absolute;
+    top: 50%;
+    left: 5%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Play Button */
+#btn {
+    font-size: 150px;
+    background-color: transparent;
+    font-family: 'Cinzel', serif;
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-shadow: 
+        0 0 10px white,
+        0 0 20px #ccc,
+        0 0 30px #999;
+    transition: transform 0.3s ease, text-shadow 0.3s ease;
+}
+
+#btn:hover {
+    transform: scale(1.05);
+    text-shadow: 
+        0 0 15px white,
+        0 0 25px #eee,
+        0 0 35px #aaa;
+}
+
+/* Contact Button */
+#btn2 {
+    font-size: 50px;
+    background-color: transparent;
+    font-family: 'Cinzel', serif;
+    color: red;
+    border: none;
+    cursor: pointer;
+    text-shadow: 
+        0 0 10px red,
+        0 0 20px #ff4d4d,
+        0 0 30px #cc0000;
+    transition: transform 0.3s ease, text-shadow 0.3s ease;
+}
+
+#btn2:hover {
+    transform: scale(1.05);
+    text-shadow: 
+        0 0 15px #ff3333,
+        0 0 25px #ff6666,
+        0 0 35px #cc0000;
+}
+#logo {
+    width: 500px; /* Adjusted for size similar to Play button */
+    max-width: 90vw;
+    margin-bottom: 3rem;
+    align-self: center;
+    filter: drop-shadow(0 0 20px red) drop-shadow(0 0 40px rgba(255, 0, 0, 0.6));
+    transition: transform 0.4s ease, filter 0.4s ease;
+    user-select: none;
+}
+/* Fade-in for buttons */
+.button-container {
+    opacity: 0;
+    transition: opacity 1.5s ease;
+}
+
+#bgVideo {
+    transition: opacity 1s ease;
+    background-color: black;
+}
+/* Popup Background Overlay */
+#popupOverlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+/* Show popup */
+#popupOverlay.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Popup Box */
+#popup {
+    background: rgba(15, 15, 15, 0.95);
+    border: 2px solid rgba(255, 0, 0, 0.8);
+    padding: 3rem;
+    border-radius: 20px;
+    text-align: center;
+    color: white;
+    font-family: 'Cinzel', serif;
+    position: relative;
+    max-width: 450px;
+    box-shadow:
+        0 0 10px rgba(255, 0, 0, 0.5),
+        0 0 20px rgba(255, 0, 0, 0.4),
+        0 0 40px rgba(255, 0, 0, 0.3);
+    animation: popupGlow 0.4s ease;
+}
+
+/* Popup Glow Entry Animation */
+@keyframes popupGlow {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Close Button (X) */
+#closePopup {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 28px;
+    color: white;
+    cursor: pointer;
+    background: none;
+    border: none;
+    text-shadow: 0 0 8px red;
+    transition: transform 0.2s ease;
+}
+#closePopup:hover {
+    transform: scale(1.2);
+    color: #ff4d4d;
+}
+
+/* LinkedIn Link */
+#popup a {
+    display: inline-block;
+    color: #ff4d4d;
+    font-size: 1.4rem;
+    text-decoration: none;
+    margin-top: 15px;
+    transition: text-shadow 0.2s ease;
+}
+
+#popup a:hover {
+    text-shadow: 0 0 8px red;
+}
+
+body{
+    background-color: black;
+    overflow-y: hidden;
+}
+#para {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Cinzel', serif;
+    font-size: 24px;
+    color: white;
+    text-shadow: 
+        0 0 10px white,
+        0 0 20px #ccc,
+        0 0 30px #999;
+    background: transparent;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    opacity: 0; /* start hidden like buttons */
+    transition: opacity 1.5s ease; /* same fade as buttons */
+}
+
+#para.show {
+    opacity: 1; /* fade in */
+}
+
+#para.fade-out {
+    opacity: 0; /* fade out */
+}
+
+

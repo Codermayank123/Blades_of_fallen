@@ -1,0 +1,220 @@
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Edu+AU+VIC+WA+NT+Guides&family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Play:wght@400;700&family=Playwrite+CU:wght@100..400&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+        *{
+           box-sizing: border-box; 
+        }
+
+        body{
+            background-color: black;
+            overflow-y: hidden;
+        }
+        canvas{}
+        .credits {
+    font-family: 'Cinzel', serif;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.9rem;
+  /* border-top: 1px solid rgba(255, 255, 255, 0.1); */
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 50;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.4);
+}
+
+        #msg{
+            position: absolute;
+            color: white;
+            /* display: flex; */
+            top: 0;
+            right: 0;
+
+            left: 0;
+            bottom: 0;
+            display: none;
+            font-family: "Press Start 2P", sans-serif;
+            font-size: 20px;
+            font-weight: 900;
+            text-shadow: 5px 5px 10px black;
+            align-items: center;
+            justify-content: center;
+        }
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+#btn {
+    font-family: 'Cinzel', serif;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.1);
+   color: white;
+  border: 3px solid  rgba(255, 255, 255, 0.1) ;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 50px;
+  text-transform: uppercase;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1), inset 0 0 5px rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  visibility: hidden;
+  position: relative;  /* Add this */
+  z-index: 10;         /* Add this to bring it above canvas */
+}
+
+#btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 0 5px #818fc8;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
+
+body {
+  background-color: black;
+  margin: 0;
+  font-family: 'Cinzel', serif;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
+
+body {
+  background-color: black;
+  margin: 0;
+  font-family: 'Cinzel', serif;
+}
+.fade-in {
+  opacity: 0;
+  animation: fadeInLogo 1.5s ease forwards;
+}
+
+@keyframes fadeInLogo {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Top Bar (Nav) */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 30px;
+  background: rgba(0, 0, 0, 0.6); /* subtle transparency */
+  backdrop-filter: blur(6px);
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  height: 80px; /* Keep navbar compact */
+  box-sizing: border-box;
+}
+
+/* Big Logo but contained inside nav */
+#game-logo {
+  height: 250px;
+  margin-top: 180px;
+  margin-left: -100px; /* Move it to the left */
+  object-fit: contain;
+  width: 500px;
+  max-width: 90vw;
+  filter: drop-shadow(0 0 20px red) drop-shadow(0 0 40px rgba(255, 0, 0, 0.6));
+  transition: transform 0.4s ease, filter 0.4s ease;
+  user-select: none;
+}
+
+/* Back Button */
+#backBtn {
+  font-family: 'Cinzel', serif;
+  font-size: 20px;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid white;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+#backBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+  <img src="logo2.png" alt="Logo" id="game-logo" />
+  <button id="backBtn">&#x2190;</button>
+</div>
+
+    <div style="  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  position: relative;">
+        <div style="position: absolute; top: 125px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; width: 1060px; padding: 20px;">
+            <!-- player health -->
+            <div style="position: relative; height: 35px; width: 100%; display: flex; justify-content: flex-end; 
+            border-top: 2px solid white;
+            border-bottom: 2px solid white;
+            border-left: 2px solid white;
+            ">
+            <div  style="background-color: red; height: 30px; width: 100%;"></div>
+            <div id="playerHealth" style="position: absolute; background-color: #818CF8; height: 30px; top:0; width: 100%; right:0;bottom: 0;"></div>
+             </div>
+            
+            <!-- timer -->
+            <div id="timer" style="background-color: black; height: 50px; color: white;  border:4px solid white;
+            font-family: 'Kanit',
+            sans-serif;
+            flex-shrink:0;
+            width:100px; display: flex; justify-content: center; align-items: center; font-size: 2.4rem; font-weight: 900;">10</div>
+            
+            <!-- enemy health -->
+             <div style="position: relative; height: 35px; width: 100%;
+             border-top: 2px solid white;
+            border-bottom: 2px solid white;
+            border-right: 2px solid white;
+            ">
+            <div  style="background-color: red; height: 30px; width: 100%;"></div>
+            <div id="enemyHealth" style="position: absolute; background-color:#818cf8;  width: 100%; height: 30px; top:0; left: 0; right:0; bottom: 0;"></div>
+             </div>
+        </div>
+        
+        <!-- victory msg -->
+
+        <div id="msg">
+            Player 1 Won!!!!
+        </div>
+        
+        <canvas>
+            
+        </canvas>
+        <button id="btn">Restart</button>
+        <footer class="credits">
+        <p>Game developed by Zenthra© 2025 | Music by Zenthra©</p>
+</footer>
+
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script src="js/classes.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="script.js"></script>
+    <script>
+        document.getElementById('backBtn').addEventListener('click', () => {
+  document.body.style.transition = 'opacity 1s ease';
+  document.body.style.opacity = '0';
+  setTimeout(() => {
+    window.location.href = 'index.html'; // Update with your homepage filename
+  }, 1000);
+});
+
+    </script>
+</body>
