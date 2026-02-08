@@ -129,10 +129,11 @@ export class GameRenderer {
         const spriteData = sprites[animState] || sprites.idle;
 
         if (!spriteData?.image) {
-            // Fallback rectangle
+            // Fallback rectangle - scaled
             const ctx = this.ctx;
+            const scale = this.getScale();
             ctx.fillStyle = spriteSet === 'player1' ? '#818cf8' : '#f87171';
-            ctx.fillRect(player.x, player.y, 50, 150);
+            ctx.fillRect(player.x * scale, player.y * scale, 50 * scale, 150 * scale);
             return;
         }
 
@@ -146,48 +147,59 @@ export class GameRenderer {
         }
 
         const frameWidth = image.width / frames;
-        const scale = 2.4;
-        const offsetX = 215;
-        const offsetY = spriteSet === 'player1' ? 140 : 250;
+
+        // Get scale factor for current canvas size
+        const canvasScale = this.getScale();
+
+        // Base sprite scale (how big the sprite should be at 1024x576)
+        const baseScale = 2.4;
+        // Combined scale for current screen
+        const spriteScale = baseScale * canvasScale;
+
+        // Offsets scaled for current screen
+        const offsetX = 215 * canvasScale;
+        const offsetY = (spriteSet === 'player1' ? 140 : 250) * canvasScale;
 
         const ctx = this.ctx;
         ctx.save();
 
-        const drawX = player.x - offsetX;
-        const drawY = player.y - offsetY;
+        // Scale player position from server coordinates (1024x576) to current canvas size
+        const scaledX = player.x * (this.width / this.baseWidth);
+        const scaledY = player.y * (this.height / this.baseHeight);
+
+        const drawX = scaledX - offsetX;
+        const drawY = scaledY - offsetY;
 
         // Player 2's sprites are drawn facing left by default
-        // So we need to flip logic: 
-        // - Player 1: flip when NOT facing right
-        // - Player 2: flip when facing right (because sprite faces left)
         let shouldFlip;
         if (isPlayer2) {
-            // Player 2 sprite faces left, so flip when facing right
             shouldFlip = player.facingRight;
         } else {
-            // Player 1 sprite faces right, so flip when facing left
             shouldFlip = !player.facingRight;
         }
 
         if (shouldFlip) {
-            ctx.translate(player.x + 25, 0);
+            ctx.translate(scaledX + 25 * canvasScale, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(
                 image,
                 frameIndex * frameWidth, 0, frameWidth, image.height,
-                25 - frameWidth * scale + offsetX, drawY,
-                frameWidth * scale, image.height * scale
+                25 * canvasScale - frameWidth * spriteScale + offsetX, drawY,
+                frameWidth * spriteScale, image.height * spriteScale
             );
         } else {
             ctx.drawImage(
                 image,
                 frameIndex * frameWidth, 0, frameWidth, image.height,
                 drawX, drawY,
-                frameWidth * scale, image.height * scale
+                frameWidth * spriteScale, image.height * spriteScale
             );
         }
 
         ctx.restore();
+
+        // Reuse the scaled values for UI elements (scaledX, scaledY already defined above)
+        const uiScale = this.getScale();
 
         // Clean player name - remove ID suffixes
         let displayName = player.username || 'Player';
@@ -196,17 +208,17 @@ export class GameRenderer {
         }
         displayName = displayName.toUpperCase();
 
-        // Player name above character
+        // Player name above character - scaled position
         ctx.fillStyle = isLocal ? '#22c55e' : '#f87171';
-        ctx.font = 'bold 14px Cinzel';
+        ctx.font = `bold ${Math.max(10, Math.floor(14 * uiScale))}px Cinzel`;
         ctx.textAlign = 'center';
-        ctx.fillText(displayName, player.x + 25, player.y - 25);
+        ctx.fillText(displayName, scaledX + 25 * uiScale, scaledY - 25 * uiScale);
 
-        // Health bar
-        const barWidth = 60;
-        const barHeight = 6;
-        const barX = player.x + 25 - barWidth / 2;
-        const barY = player.y - 40;
+        // Health bar - scaled
+        const barWidth = 60 * uiScale;
+        const barHeight = 6 * uiScale;
+        const barX = scaledX + 25 * uiScale - barWidth / 2;
+        const barY = scaledY - 40 * uiScale;
 
         ctx.fillStyle = '#dc2626';
         ctx.fillRect(barX, barY, barWidth, barHeight);
