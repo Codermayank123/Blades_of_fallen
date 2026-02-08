@@ -76,8 +76,14 @@ function App() {
         }
     }, [playerId, playSFX])
 
+    // Auto-detect production vs development
+    const isProduction = window.location.protocol === 'https:';
+    const WS_URL = import.meta.env.VITE_WS_URL || (isProduction
+        ? `wss://${window.location.hostname.replace('frontend', 'backend')}`
+        : 'ws://localhost:3001');
+
     const { send, connected } = useWebSocket(
-        import.meta.env.VITE_WS_URL || 'ws://localhost:3001',
+        WS_URL,
         { onMessage: handleMessage }
     )
 

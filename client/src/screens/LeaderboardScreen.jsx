@@ -7,7 +7,11 @@ export default function LeaderboardScreen({ currentUser, onBack }) {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    // Auto-detect production vs development
+    const isProduction = window.location.protocol === 'https:';
+    const API_URL = import.meta.env.VITE_API_URL || (isProduction
+        ? `https://${window.location.hostname.replace('frontend', 'backend')}/api`
+        : 'http://localhost:3001/api');
 
     useEffect(() => {
         fetchLeaderboard();

@@ -7,8 +7,12 @@ export default function LoginScreen({ onLogin, connected }) {
     const [googleReady, setGoogleReady] = useState(false);
     const tokenClientRef = useRef(null);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-    const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    // Auto-detect production vs development
+    const isProduction = window.location.protocol === 'https:';
+    const API_URL = import.meta.env.VITE_API_URL || (isProduction
+        ? `https://${window.location.hostname.replace('frontend', 'backend')}/api`
+        : 'http://localhost:3001/api');
+    const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '626931226663-psqii8knvvh5jelps8vc06v1kuccgc0n.apps.googleusercontent.com';
 
     // Handle Google OAuth token
     const handleGoogleToken = useCallback(async (tokenResponse) => {
