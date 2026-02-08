@@ -14,6 +14,9 @@ export default function LoginScreen({ onLogin, connected }) {
         : 'http://localhost:3001/api');
     const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '626931226663-psqii8knvvh5jelps8vc06v1kuccgc0n.apps.googleusercontent.com';
 
+    // Debug: Log API URL
+    console.log('API_URL:', API_URL);
+
     // Handle Google OAuth token
     const handleGoogleToken = useCallback(async (tokenResponse) => {
         if (!tokenResponse.access_token) {
@@ -34,8 +37,12 @@ export default function LoginScreen({ onLogin, connected }) {
 
             const googleUser = await userInfoRes.json();
 
+            // Ensure API_URL ends with /api
+            const baseApi = API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`;
+            console.log('Sending to:', `${baseApi}/auth/google/token`);
+
             // Send to our server
-            const res = await fetch(`${API_URL}/auth/google/token`, {
+            const res = await fetch(`${baseApi}/auth/google/token`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
