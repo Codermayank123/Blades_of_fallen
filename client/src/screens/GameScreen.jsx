@@ -3,6 +3,7 @@ import { useGameLoop } from '../hooks/useGameLoop';
 import { useInputHandler } from '../hooks/useInputHandler';
 import { useAudio } from '../hooks/useAudio';
 import { GameRenderer } from '../game/GameRenderer';
+import MobileControls from '../components/MobileControls';
 
 export default function GameScreen({ send, playerId, roomInfo, gameState, onArenaReady }) {
     const canvasRef = useRef(null);
@@ -326,6 +327,9 @@ export default function GameScreen({ send, playerId, roomInfo, gameState, onAren
                     display: 'block'
                 }}
             />
+
+            {/* Mobile touch controls */}
+            <MobileControls send={send} isPlaying={assetsLoaded} />
         </div>
     );
 }
