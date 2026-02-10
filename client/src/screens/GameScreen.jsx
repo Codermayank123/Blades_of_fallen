@@ -15,15 +15,65 @@ export default function GameScreen({ send, playerId, roomInfo, gameState, onAren
     const [sfxVol, setSfxVol] = useState(80);
     const [musicVol, setMusicVol] = useState(30);
     const [canvasSize, setCanvasSize] = useState({ width: 1024, height: 576 });
+    const [isPortrait, setIsPortrait] = useState(false);
     const lastHealthRef = useRef({});
 
     const { playSFX, playMusic, stopMusic, setSFXVolume, setMusicVolume, toggleMute } = useAudio();
 
+    // Force landscape on mobile
+    useEffect(() => {
+        // Try to lock orientation using Screen Orientation API
+        const lockLandscape = async () => {
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                    console.log('Screen locked to landscape');
+                }
+            } catch (e) {
+                // Orientation lock not supported or not in fullscreen
+                console.log('Orientation lock not available:', e.message);
+            }
+        };
+
+        // Try fullscreen + landscape lock on mobile
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isMobile) {
+            lockLandscape();
+
+            // Try requesting fullscreen for orientation lock to work
+            const el = document.documentElement;
+            if (el.requestFullscreen) {
+                el.requestFullscreen().then(() => lockLandscape()).catch(() => { });
+            }
+        }
+
+        // Check if portrait
+        const checkOrientation = () => {
+            const portrait = window.innerHeight > window.innerWidth;
+            setIsPortrait(portrait);
+        };
+
+        checkOrientation();
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+
+        return () => {
+            window.removeEventListener('resize', checkOrientation);
+            window.removeEventListener('orientationchange', checkOrientation);
+            // Unlock orientation when leaving game
+            if (screen.orientation && screen.orientation.unlock) {
+                try { screen.orientation.unlock(); } catch (e) { }
+            }
+            if (document.fullscreenElement) {
+                try { document.exitFullscreen(); } catch (e) { }
+            }
+        };
+    }, []);
+
     // Handle window resize for TRULY full-screen canvas
     const updateCanvasSize = useCallback(() => {
-        // Use almost full window size with minimal padding
         const padding = 20;
-        const healthBarHeight = 70; // Height for health bars
+        const healthBarHeight = 70;
         const maxWidth = window.innerWidth - padding;
         const maxHeight = window.innerHeight - healthBarHeight - padding;
 
@@ -37,9 +87,12 @@ export default function GameScreen({ send, playerId, roomInfo, gameState, onAren
             width = height * aspectRatio;
         }
 
-        // Ensure minimum size
-        width = Math.max(width, 640);
-        height = Math.max(height, 360);
+        // On mobile portrait, don't enforce minimum - let it be smaller
+        const isMobilePortrait = window.innerHeight > window.innerWidth && window.innerWidth < 768;
+        if (!isMobilePortrait) {
+            width = Math.max(width, 640);
+            height = Math.max(height, 360);
+        }
 
         setCanvasSize({ width: Math.floor(width), height: Math.floor(height) });
     }, []);
@@ -181,6 +234,56 @@ export default function GameScreen({ send, playerId, roomInfo, gameState, onAren
                 background: '#000'
             }}
         >
+            {/* Portrait mode overlay - prompt to rotate */}
+            {isPortrait && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 100%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999,
+                    color: 'white',
+                    textAlign: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        fontSize: '60px',
+                        animation: 'rotatePhone 2s ease-in-out infinite',
+                        marginBottom: '24px'
+                    }}>
+                        📱
+                    </div>
+                    <h2 style={{
+                        fontFamily: 'Cinzel, serif',
+                        color: '#c4a54d',
+                        fontSize: 'clamp(18px, 4vw, 28px)',
+                        marginBottom: '12px',
+                        textShadow: '0 0 20px rgba(196, 165, 77, 0.4)'
+                    }}>
+                        Rotate Your Device
+                    </h2>
+                    <p style={{
+                        color: 'rgba(255,255,255,0.6)',
+                        fontSize: 'clamp(12px, 2.5vw, 16px)',
+                        maxWidth: '280px'
+                    }}>
+                        Turn your phone sideways for the best arena experience
+                    </p>
+                    <style>{`
+                        @keyframes rotatePhone {
+                            0%, 100% { transform: rotate(0deg); }
+                            25% { transform: rotate(-30deg); }
+                            75% { transform: rotate(-90deg); }
+                        }
+                    `}</style>
+                </div>
+            )}
             {/* Settings button */}
             <button
                 className="settings-btn"
