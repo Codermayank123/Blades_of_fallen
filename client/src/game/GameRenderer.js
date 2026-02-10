@@ -25,20 +25,22 @@ export class GameRenderer {
         this.ctx = ctx;
         this.width = width;
         this.height = height;
-        this.baseWidth = 1024;  // Original design width for scaling
-        this.baseHeight = 576;  // Original design height for scaling
+        this.baseWidth = 1024;
+        this.baseHeight = 576;
         this.images = {};
         this.background = null;
         this.shop = null;
-        this.frameCount = 0;
-        this.frameHold = 8;
         this.assetsLoaded = false;
+
+        // Time-based animation (consistent across all devices)
+        this.animTime = 0;           // Accumulated time in ms
+        this.frameDuration = 120;    // ms per animation frame (consistent speed)
+        this.lastTimestamp = 0;
     }
 
     setSize(width, height) {
         this.width = width;
         this.height = height;
-        // Update canvas size
         if (this.ctx.canvas) {
             this.ctx.canvas.width = width;
             this.ctx.canvas.height = height;
@@ -51,22 +53,46 @@ export class GameRenderer {
 
     async loadAssets() {
         try {
-            this.background = await this.loadImage('/img/background.png');
-            this.shop = await this.loadImage('/img/shop.png');
+            // Load ALL assets in parallel for much faster loading
+            const allPromises = [];
 
+            // Background and shop
+            const bgPromise = this.loadImage('/img/background.png');
+            const shopPromise = this.loadImage('/img/shop.png');
+            allPromises.push(bgPromise, shopPromise);
+
+            // All sprite images in parallel
+            const spritePromises = {};
             for (const [playerKey, sprites] of Object.entries(SPRITES)) {
-                this.images[playerKey] = {};
+                spritePromises[playerKey] = {};
                 for (const [animName, config] of Object.entries(sprites)) {
-                    const img = await this.loadImage(config.src);
+                    const promise = this.loadImage(config.src);
+                    spritePromises[playerKey][animName] = { promise, frames: config.frames };
+                    allPromises.push(promise);
+                }
+            }
+
+            // Wait for ALL images at once
+            await Promise.all(allPromises);
+
+            // Assign loaded images
+            this.background = await bgPromise;
+            this.shop = await shopPromise;
+
+            for (const [playerKey, sprites] of Object.entries(spritePromises)) {
+                this.images[playerKey] = {};
+                for (const [animName, data] of Object.entries(sprites)) {
+                    const img = await data.promise;
                     this.images[playerKey][animName] = {
                         image: img,
-                        frames: config.frames
+                        frames: data.frames
                     };
                 }
             }
 
             this.assetsLoaded = true;
-            console.log('All game assets loaded');
+            this.lastTimestamp = performance.now();
+            console.log('All game assets loaded (parallel)');
         } catch (error) {
             console.error('Error loading assets:', error);
         }
@@ -76,14 +102,30 @@ export class GameRenderer {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => resolve(img);
-            img.onerror = () => resolve(null);
+            img.onerror = () => {
+                console.warn('Failed to load:', src);
+                resolve(null);
+            };
             img.src = src;
         });
     }
 
-    render(gameState, localPlayerId) {
+    render(gameState, localPlayerId, deltaTime) {
         const ctx = this.ctx;
-        this.frameCount++;
+
+        // Update animation time using deltaTime for consistency
+        // deltaTime comes from requestAnimationFrame - same real-world time on all devices
+        if (deltaTime && deltaTime > 0) {
+            this.animTime += deltaTime;
+        } else {
+            // Fallback: calculate from performance.now()
+            const now = performance.now();
+            this.animTime += (now - this.lastTimestamp);
+            this.lastTimestamp = now;
+        }
+
+        // Current animation frame (time-based, device-independent)
+        const animFrame = Math.floor(this.animTime / this.frameDuration);
 
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, this.width, this.height);
@@ -94,12 +136,13 @@ export class GameRenderer {
 
         if (this.shop) {
             const shopFrames = 6;
-            const shopFrame = Math.floor(this.frameCount / 30) % shopFrames;
+            const shopFrame = animFrame % shopFrames;
             const shopWidth = this.shop.width / shopFrames;
+            const scale = this.getScale();
             ctx.drawImage(
                 this.shop,
                 shopFrame * shopWidth, 0, shopWidth, this.shop.height,
-                600, 135, shopWidth * 2.7, this.shop.height * 2.7
+                600 * scale, 135 * scale, shopWidth * 2.7 * scale, this.shop.height * 2.7 * scale
             );
         }
 
@@ -107,11 +150,10 @@ export class GameRenderer {
         ctx.fillRect(0, 0, this.width, this.height);
 
         if (gameState?.players && gameState.players.length > 0) {
-            // Assign sprites based on player index order from server
             gameState.players.forEach((player, index) => {
                 const spriteSet = index === 0 ? 'player1' : 'player2';
                 const isPlayer2 = index === 1;
-                this.drawPlayer(player, spriteSet, player.id === localPlayerId, isPlayer2);
+                this.drawPlayer(player, spriteSet, player.id === localPlayerId, isPlayer2, animFrame);
             });
         } else {
             ctx.fillStyle = 'white';
@@ -121,39 +163,42 @@ export class GameRenderer {
         }
     }
 
-    drawPlayer(player, spriteSet, isLocal, isPlayer2) {
+    drawPlayer(player, spriteSet, isLocal, isPlayer2, animFrame) {
         const sprites = this.images[spriteSet];
         if (!sprites) return;
 
         const animState = player.animState || 'idle';
         const spriteData = sprites[animState] || sprites.idle;
 
+        // Get scale factor
+        const canvasScale = this.getScale();
+        const scaleX = this.width / this.baseWidth;
+        const scaleY = this.height / this.baseHeight;
+
         if (!spriteData?.image) {
             // Fallback rectangle - scaled
             const ctx = this.ctx;
-            const scale = this.getScale();
             ctx.fillStyle = spriteSet === 'player1' ? '#818cf8' : '#f87171';
-            ctx.fillRect(player.x * scale, player.y * scale, 50 * scale, 150 * scale);
+            ctx.fillRect(player.x * scaleX, player.y * scaleY, 50 * canvasScale, 150 * canvasScale);
             return;
         }
 
         const { image, frames } = spriteData;
 
+        // Use time-based frame index (consistent across devices)
         let frameIndex;
         if (animState === 'attack1' && player.attackFrame !== undefined) {
+            // Attack frames come from server - already synchronized
             frameIndex = Math.min(player.attackFrame, frames - 1);
         } else {
-            frameIndex = Math.floor(this.frameCount / this.frameHold) % frames;
+            // Time-based animation frame (same speed on all devices)
+            frameIndex = animFrame % frames;
         }
 
         const frameWidth = image.width / frames;
 
-        // Get scale factor for current canvas size
-        const canvasScale = this.getScale();
-
-        // Base sprite scale (how big the sprite should be at 1024x576)
+        // Sprite scaling
         const baseScale = 2.4;
-        // Combined scale for current screen
         const spriteScale = baseScale * canvasScale;
 
         // Offsets scaled for current screen
@@ -164,13 +209,13 @@ export class GameRenderer {
         ctx.save();
 
         // Scale player position from server coordinates (1024x576) to current canvas size
-        const scaledX = player.x * (this.width / this.baseWidth);
-        const scaledY = player.y * (this.height / this.baseHeight);
+        const scaledX = player.x * scaleX;
+        const scaledY = player.y * scaleY;
 
         const drawX = scaledX - offsetX;
         const drawY = scaledY - offsetY;
 
-        // Player 2's sprites are drawn facing left by default
+        // Player 2's sprites face left by default, Player 1 faces right
         let shouldFlip;
         if (isPlayer2) {
             shouldFlip = player.facingRight;
@@ -198,23 +243,23 @@ export class GameRenderer {
 
         ctx.restore();
 
-        // Reuse the scaled values for UI elements (scaledX, scaledY already defined above)
-        const uiScale = this.getScale();
+        // UI elements (name + health bar)
+        const uiScale = canvasScale;
 
-        // Clean player name - remove ID suffixes
+        // Clean player name
         let displayName = player.username || 'Player';
         if (displayName.includes('_')) {
             displayName = displayName.split('_')[0];
         }
         displayName = displayName.toUpperCase();
 
-        // Player name above character - scaled position
+        // Player name above character
         ctx.fillStyle = isLocal ? '#22c55e' : '#f87171';
         ctx.font = `bold ${Math.max(10, Math.floor(14 * uiScale))}px Cinzel`;
         ctx.textAlign = 'center';
         ctx.fillText(displayName, scaledX + 25 * uiScale, scaledY - 25 * uiScale);
 
-        // Health bar - scaled
+        // Health bar
         const barWidth = 60 * uiScale;
         const barHeight = 6 * uiScale;
         const barX = scaledX + 25 * uiScale - barWidth / 2;

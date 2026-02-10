@@ -107,11 +107,11 @@ export default function GameScreen({ send, playerId, roomInfo, gameState }) {
     // Handle inputs
     useInputHandler(send, true);
 
-    // Render loop
+    // Render loop - pass deltaTime for consistent animation speed across all devices
     useGameLoop((dt) => {
         const renderer = rendererRef.current;
         if (!renderer || !assetsLoaded) return;
-        renderer.render(gameState, playerId);
+        renderer.render(gameState, playerId, dt);
     });
 
     // Clean player name - remove any ID suffixes or timestamp suffixes
@@ -262,6 +262,55 @@ export default function GameScreen({ send, playerId, roomInfo, gameState }) {
                     </div>
                 </div>
             </div>
+
+            {/* Loading overlay */}
+            {!assetsLoaded && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 100%)',
+                    zIndex: 50
+                }}>
+                    <div style={{
+                        fontSize: 'clamp(20px, 3vw, 32px)',
+                        color: '#c4a54d',
+                        fontFamily: 'Cinzel, serif',
+                        marginBottom: '20px',
+                        textShadow: '0 0 20px rgba(196, 165, 77, 0.5)'
+                    }}>
+                        ⚔️ Loading Arena...
+                    </div>
+                    <div style={{
+                        width: '200px',
+                        height: '4px',
+                        background: 'rgba(255,255,255,0.1)',
+                        borderRadius: '2px',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            width: '60%',
+                            height: '100%',
+                            background: 'linear-gradient(90deg, #c4a54d, #f5d78e)',
+                            borderRadius: '2px',
+                            animation: 'loading-bar 1.5s ease-in-out infinite'
+                        }} />
+                    </div>
+                    <style>{`
+                        @keyframes loading-bar {
+                            0% { width: 10%; margin-left: 0; }
+                            50% { width: 60%; margin-left: 20%; }
+                            100% { width: 10%; margin-left: 90%; }
+                        }
+                    `}</style>
+                </div>
+            )}
 
             {/* Game canvas - FULL SCREEN */}
             <canvas
