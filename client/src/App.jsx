@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useAudio } from './hooks/useAudio'
+import SplashScreen from './screens/SplashScreen'
 import LoginScreen from './screens/LoginScreen'
 import LobbyScreen from './screens/LobbyScreen'
 import GameScreen from './screens/GameScreen'
@@ -9,7 +10,7 @@ import ProfileScreen from './screens/ProfileScreen'
 import LeaderboardScreen from './screens/LeaderboardScreen'
 
 function App() {
-    const [screen, setScreen] = useState('login')
+    const [screen, setScreen] = useState('splash')
     const [username, setUsername] = useState('')
     const [roomInfo, setRoomInfo] = useState(null)
     const [gameResult, setGameResult] = useState(null)
@@ -39,7 +40,6 @@ function App() {
             case 'PLAYER_JOINED':
             case 'PLAYER_READY':
             case 'ROOM_UPDATE':
-                // Update room info for all room state changes
                 setRoomInfo(msg.room)
                 break
             case 'GAME_START':
@@ -49,18 +49,18 @@ function App() {
             case 'STATE_UPDATE':
                 setGameState(msg)
                 break
+            case 'TIMER_START':
+                // Server confirmed both arenas loaded - start the timer
+                setGameState(prev => prev ? { ...prev, timer: msg.timer, timerStarted: true } : prev)
+                break
             case 'GAME_OVER':
-                // Store the result and keep showing game screen for death animation
                 setGameResult(msg)
-                // Update game state one more time to show death animation
                 if (msg.players) {
                     setGameState(prev => ({ ...prev, players: msg.players }))
                 }
-                // Play victory sound for winner immediately
                 if (msg.winner === playerId) {
                     playSFX('victory');
                 }
-                // Delay transition to results to allow death animation to play
                 setTimeout(() => {
                     setScreen('results')
                 }, 2000)
@@ -86,6 +86,11 @@ function App() {
         WS_URL,
         { onMessage: handleMessage }
     )
+
+    // Handle arena loaded - tell server this client is ready to play
+    const handleArenaReady = useCallback(() => {
+        send({ type: 'ARENA_READY' });
+    }, [send]);
 
     const handleLogin = (name, token, userData) => {
         setUsername(name)
@@ -134,6 +139,9 @@ function App() {
 
     return (
         <div className="app">
+            {screen === 'splash' && (
+                <SplashScreen onEnter={() => setScreen('login')} />
+            )}
             {screen === 'login' && (
                 <LoginScreen onLogin={handleLogin} connected={connected} />
             )}
@@ -158,6 +166,7 @@ function App() {
                     playerId={playerId}
                     roomInfo={roomInfo}
                     gameState={gameState}
+                    onArenaReady={handleArenaReady}
                 />
             )}
             {screen === 'results' && (

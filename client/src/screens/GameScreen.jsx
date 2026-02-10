@@ -4,7 +4,7 @@ import { useInputHandler } from '../hooks/useInputHandler';
 import { useAudio } from '../hooks/useAudio';
 import { GameRenderer } from '../game/GameRenderer';
 
-export default function GameScreen({ send, playerId, roomInfo, gameState }) {
+export default function GameScreen({ send, playerId, roomInfo, gameState, onArenaReady }) {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const rendererRef = useRef(null);
@@ -60,12 +60,14 @@ export default function GameScreen({ send, playerId, roomInfo, gameState }) {
         rendererRef.current.loadAssets().then(() => {
             setAssetsLoaded(true);
             playMusic();
+            // Tell server this client's arena is ready
+            if (onArenaReady) onArenaReady();
         });
 
         return () => {
             stopMusic();
         };
-    }, [playMusic, stopMusic]);
+    }, [playMusic, stopMusic, onArenaReady]);
 
     // Update renderer size when canvas size changes
     useEffect(() => {

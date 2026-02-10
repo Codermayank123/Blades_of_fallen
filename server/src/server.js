@@ -115,6 +115,11 @@ function handleMessage(socket, player, message) {
             handleLeaveRoom(socket, playerId);
             break;
 
+        case MSG.ARENA_READY:
+        case 'ARENA_READY':
+            handleArenaReady(playerId);
+            break;
+
         case 'GET_ROOMS':
             send(socket, { type: 'ROOM_LIST', rooms: lobby.getAvailableRooms() });
             break;
@@ -242,6 +247,16 @@ function handleInput(playerId, message) {
     if (!input) return;
 
     room.handleInput(playerId, input);
+}
+
+function handleArenaReady(playerId) {
+    const roomCode = lobby.playerRooms.get(playerId);
+    if (!roomCode) return;
+
+    const room = lobby.getRoom(roomCode);
+    if (room) {
+        room.arenaReady(playerId);
+    }
 }
 
 function handleLeaveRoom(socket, playerId) {

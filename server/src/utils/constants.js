@@ -40,6 +40,7 @@ export const MSG = {
     LEAVE_ROOM: 'LEAVE_ROOM',
     INPUT: 'INPUT',
     READY: 'READY',
+    ARENA_READY: 'ARENA_READY',
 
     // Server -> Client
     ROOM_JOINED: 'ROOM_JOINED',
@@ -47,6 +48,7 @@ export const MSG = {
     PLAYER_JOINED: 'PLAYER_JOINED',
     PLAYER_LEFT: 'PLAYER_LEFT',
     GAME_START: 'GAME_START',
+    TIMER_START: 'TIMER_START',
     STATE_UPDATE: 'STATE_UPDATE',
     GAME_OVER: 'GAME_OVER',
     ERROR: 'ERROR'

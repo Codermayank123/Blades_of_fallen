@@ -87,17 +87,60 @@ export class GameRoom {
         this.state = ROOM_STATES.IN_PROGRESS;
         this.tick = 0;
         this.timer = MATCH_DURATION;
+        this.arenaReadyCount = 0;
+        this.timerStarted = false;
 
-        // Notify players
+        // Notify players to load their arenas
         this.broadcast({
             type: MSG.GAME_START,
             players: this.getPlayerStates()
         });
 
-        // Start game loop
+        // Start game loop (physics/movement works immediately)
         this.gameLoop = setInterval(() => this.update(), TICK_INTERVAL);
 
-        // Start timer countdown
+        // Timeout: if both clients don't confirm within 10 seconds, start timer anyway
+        this.arenaTimeout = setTimeout(() => {
+            if (!this.timerStarted) {
+                console.log(`Room ${this.roomCode}: Arena timeout - starting timer`);
+                this.startTimer();
+            }
+        }, 10000);
+    }
+
+    // Called when a client confirms their arena has loaded
+    arenaReady(playerId) {
+        if (this.timerStarted) return;
+
+        const player = this.players.get(playerId);
+        if (player && !player.arenaReady) {
+            player.arenaReady = true;
+            this.arenaReadyCount++;
+            console.log(`Room ${this.roomCode}: Player ${playerId} arena ready (${this.arenaReadyCount}/2)`);
+
+            // Both players' arenas are loaded - start the timer!
+            if (this.arenaReadyCount >= 2) {
+                this.startTimer();
+            }
+        }
+    }
+
+    startTimer() {
+        if (this.timerStarted) return;
+        this.timerStarted = true;
+
+        // Clear the timeout since both are ready
+        if (this.arenaTimeout) {
+            clearTimeout(this.arenaTimeout);
+            this.arenaTimeout = null;
+        }
+
+        console.log(`Room ${this.roomCode}: Both arenas ready - timer started!`);
+
+        // Tell both clients to start their timers
+        this.broadcast({ type: MSG.TIMER_START, timer: this.timer });
+
+        // Start countdown
         this.timerInterval = setInterval(() => {
             this.timer--;
             if (this.timer <= 0) {
