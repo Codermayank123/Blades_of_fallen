@@ -1,6 +1,7 @@
 import { ServerFighter } from './Fighter.js';
 import { processAttacks } from './Physics.js';
 import { User } from '../db/User.js';
+import { Match } from '../db/Match.js';
 import { calculateEloChange, XP_REWARDS } from '../utils/elo.js';
 import {
     TICK_RATE,
@@ -249,6 +250,22 @@ export class GameRoom {
             eloChanges,
             players: this.getPlayerStates()
         });
+
+        // Save match to database
+        try {
+            const match = new Match({
+                roomCode: this.roomCode,
+                gameType: 'duel',
+                players: [...this.players.values()].map(p => ({
+                    odId: p.odId, mongoUserId: p.mongoUserId,
+                    username: p.username, score: p.fighter?.health || 0,
+                })),
+                winnerId, winnerUsername: this.players.get(winnerId)?.username,
+                reason, duration: MATCH_DURATION - this.timer,
+            });
+            await match.save();
+            console.log(`[saveMatch] Saved duel match ${match._id}`);
+        } catch (err) { console.error('Error saving duel match:', err); }
     }
 
     async updatePlayerStats(winnerId, reason) {

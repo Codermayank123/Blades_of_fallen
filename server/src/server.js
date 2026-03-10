@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { lobby } from './matchmaking/Lobby.js';
 import { validateInputPacket, RateLimiter, sanitizeString } from './utils/validation.js';
-import { MSG } from './utils/constants.js';
+import { MSG, GAME_PLAYER_LIMITS } from './utils/constants.js';
 
 // Try to import auth, but don't fail if not available
 let getUserFromToken = null;
@@ -88,7 +88,7 @@ function handleMessage(socket, player, message) {
 
         case MSG.CREATE_ROOM:
         case 'CREATE_ROOM':
-            handleCreateRoom(socket, playerId, player.username, player.mongoUserId);
+            handleCreateRoom(socket, playerId, player.username, player.mongoUserId, message.gameType);
             break;
 
         case MSG.JOIN_ROOM:
@@ -97,7 +97,7 @@ function handleMessage(socket, player, message) {
             break;
 
         case 'QUICK_MATCH':
-            handleQuickMatch(socket, playerId, player.username, player.mongoUserId);
+            handleQuickMatch(socket, playerId, player.username, player.mongoUserId, message.gameType);
             break;
 
         case MSG.READY:
@@ -120,6 +120,11 @@ function handleMessage(socket, player, message) {
             handleArenaReady(playerId);
             break;
 
+        case MSG.GAME_ACTION:
+        case 'GAME_ACTION':
+            handleGameAction(playerId, message);
+            break;
+
         case 'GET_ROOMS':
             send(socket, { type: 'ROOM_LIST', rooms: lobby.getAvailableRooms() });
             break;
@@ -129,8 +134,8 @@ function handleMessage(socket, player, message) {
     }
 }
 
-function handleCreateRoom(socket, playerId, username, mongoUserId) {
-    const room = lobby.createRoom(playerId);
+function handleCreateRoom(socket, playerId, username, mongoUserId, gameType = 'duel') {
+    const room = lobby.createRoom(playerId, gameType);
     room.addPlayer(playerId, socket, username, mongoUserId);
 
     send(socket, {
@@ -152,7 +157,8 @@ function handleJoinRoom(socket, playerId, username, roomCode, mongoUserId) {
         return;
     }
 
-    if (room.players.size >= 2) {
+    const maxPlayers = room.maxPlayers || (GAME_PLAYER_LIMITS[room.gameType]?.max || 2);
+    if (room.players.size >= maxPlayers) {
         sendError(socket, 'Room is full');
         return;
     }
@@ -177,14 +183,16 @@ function handleJoinRoom(socket, playerId, username, roomCode, mongoUserId) {
     });
 }
 
-function handleQuickMatch(socket, playerId, username, mongoUserId) {
+function handleQuickMatch(socket, playerId, username, mongoUserId, gameType = 'duel') {
     // Find available room or create new
-    let room = lobby.findAvailableRoom();
+    let room = lobby.findAvailableRoom(gameType);
 
     if (!room) {
         // Create new room
-        room = lobby.createRoom(playerId);
+        room = lobby.createRoom(playerId, gameType);
         room.addPlayer(playerId, socket, username, mongoUserId);
+        // Auto-ready the creator in quick match
+        room.setReady(playerId);
 
         send(socket, {
             type: MSG.ROOM_CREATED,
@@ -195,6 +203,9 @@ function handleQuickMatch(socket, playerId, username, mongoUserId) {
         if (room.addPlayer(playerId, socket, username, mongoUserId)) {
             lobby.playerRooms.set(playerId, room.roomCode);
 
+            // Auto-ready the joining player in quick match
+            room.setReady(playerId);
+
             send(socket, {
                 type: MSG.ROOM_JOINED,
                 room: room.getInfo()
@@ -202,6 +213,12 @@ function handleQuickMatch(socket, playerId, username, mongoUserId) {
 
             room.broadcast({
                 type: 'PLAYER_JOINED',
+                room: room.getInfo()
+            });
+
+            // Broadcast ready state so all players see the update
+            room.broadcast({
+                type: 'PLAYER_READY',
                 room: room.getInfo()
             });
         } else {
@@ -242,11 +259,24 @@ function handleInput(playerId, message) {
     const room = lobby.getRoom(roomCode);
     if (!room) return;
 
-    // Validate input
-    const input = validateInputPacket(message);
-    if (!input) return;
+    // Validate input (duel game only)
+    if (room.handleInput) {
+        const input = validateInputPacket(message);
+        if (!input) return;
+        room.handleInput(playerId, input);
+    }
+}
 
-    room.handleInput(playerId, input);
+function handleGameAction(playerId, message) {
+    const roomCode = lobby.playerRooms.get(playerId);
+    if (!roomCode) return;
+
+    const room = lobby.getRoom(roomCode);
+    if (!room) return;
+
+    if (room.handleGameAction) {
+        room.handleGameAction(playerId, message);
+    }
 }
 
 function handleArenaReady(playerId) {
@@ -254,7 +284,14 @@ function handleArenaReady(playerId) {
     if (!roomCode) return;
 
     const room = lobby.getRoom(roomCode);
-    if (room) {
+    if (!room) return;
+
+    // BaseGameRoom.handleArenaReady defers onStart() until all players ready
+    if (room.handleArenaReady) {
+        room.handleArenaReady(playerId);
+    }
+    // Legacy duel-specific arenaReady
+    if (room.arenaReady) {
         room.arenaReady(playerId);
     }
 }

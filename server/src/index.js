@@ -8,7 +8,11 @@ import { connectDB } from './db/connection.js';
 import { handleConnection } from './server.js';
 import authRoutes from './routes/auth.js';
 import leaderboardRoutes from './routes/leaderboard.js';
+import adminRoutes from './routes/admin.js';
+import contactRoutes from './routes/contact.js';
+import userRoutes from './routes/user.js';
 import { getUserFromToken } from './auth/google.js';
+import { User } from './db/User.js';
 
 const PORT = process.env.PORT || 3001;
 
@@ -18,6 +22,7 @@ const defaultOrigins = [
     'https://blades-frontend.onrender.com',
     'http://localhost:5173',
     'http://localhost:5174',
+    'http://localhost:5175',
     'http://localhost:3000'
 ];
 const envOrigins = process.env.CORS_ORIGIN
@@ -44,7 +49,7 @@ app.use(cors({
     },
     credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Auth middleware
 app.use((req, res, next) => {
@@ -62,10 +67,16 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/user', userRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
+});
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: Date.now(), server: 'nexus-arena' });
 });
 
 // Create HTTP server
@@ -78,9 +89,33 @@ wss.on('connection', (socket, req) => {
     handleConnection(socket, req);
 });
 
+// Expose wss to Express routes (for online player count)
+app.locals.wss = wss;
+
 wss.on('error', (error) => {
     console.error('WebSocket server error:', error);
 });
+
+// Seed admin user
+async function seedAdmin() {
+    try {
+        const existing = await User.findOne({ username: 'admin', role: 'admin' });
+        if (!existing) {
+            const admin = new User({
+                username: 'admin',
+                email: 'admin@site.com',
+                role: 'admin',
+                avatar: ''
+            });
+            await admin.save();
+            console.log('👑 Admin user seeded (username: admin)');
+        } else {
+            console.log('👑 Admin user exists');
+        }
+    } catch (err) {
+        console.warn('⚠️ Failed to seed admin:', err.message);
+    }
+}
 
 // Start server
 async function start() {
@@ -88,6 +123,7 @@ async function start() {
     try {
         await connectDB();
         console.log('✅ MongoDB connected');
+        await seedAdmin();
     } catch (err) {
         console.warn('⚠️ MongoDB not connected - running without database');
         console.warn('   Auth/leaderboard features disabled');

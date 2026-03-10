@@ -5,6 +5,9 @@ const UserSchema = new mongoose.Schema({
     googleId: { type: String, unique: true, sparse: true },
     email: { type: String, unique: true, sparse: true },
 
+    // Role
+    role: { type: String, enum: ['admin', 'player'], default: 'player' },
+
     // Profile
     username: { type: String, required: true, unique: true },
     avatar: { type: String, default: '' },
@@ -32,6 +35,18 @@ const UserSchema = new mongoose.Schema({
         bestWinStreak: { type: Number, default: 0 }
     },
 
+    // Per-game statistics
+    gameStats: {
+        type: Map,
+        of: new mongoose.Schema({
+            wins: { type: Number, default: 0 },
+            losses: { type: Number, default: 0 },
+            draws: { type: Number, default: 0 },
+            totalMatches: { type: Number, default: 0 },
+        }, { _id: false }),
+        default: {},
+    },
+
     // Season data
     seasonStats: [{
         season: Number,
@@ -48,6 +63,7 @@ const UserSchema = new mongoose.Schema({
         opponent: String,
         result: { type: String, enum: ['win', 'loss', 'draw'] },
         eloChange: Number,
+        gameType: { type: String, default: 'duel' },
         date: { type: Date, default: Date.now }
     }]
 });
@@ -116,13 +132,15 @@ UserSchema.methods.getPublicProfile = function () {
         id: this._id,
         username: this.username,
         avatar: this.avatar,
+        role: this.role,
         level: this.level,
         elo: this.elo,
         rank: this.rank,
         stats: this.stats,
         winRate: this.getWinRate(),
         kd: this.getKD(),
-        matchHistory: (this.matchHistory || []).slice(0, 10) // Last 10 matches
+        matchHistory: (this.matchHistory || []).slice(0, 10),
+        gameStats: this.gameStats ? Object.fromEntries(this.gameStats) : {},
     };
 };
 

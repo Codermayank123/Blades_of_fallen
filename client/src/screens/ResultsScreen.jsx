@@ -1,249 +1,196 @@
-import { useAudio } from '../hooks/useAudio';
+import React from 'react';
+import { BRAND, MODE_LABELS } from '../config/brand.js';
 
 export default function ResultsScreen({ result, playerId, onPlayAgain }) {
-    const { playSFX } = useAudio();
-
     if (!result) return null;
 
     const isWinner = result.winner === playerId;
     const isDraw = result.reason === 'tie';
-
-    // Get ELO change for this player
     const eloChange = result.eloChanges?.[playerId];
+    const gameType = result.gameType || 'duel';
+    const players = result.players || [];
 
-    // Clean player name helper
     const cleanName = (name, fallback) => {
         if (!name) return fallback;
-        let clean = name.includes('_') ? name.split('_')[0] : name;
-        return clean.toUpperCase();
+        return (name.includes('_') ? name.split('_')[0] : name).toUpperCase();
     };
-
-    // Get player names
-    const players = result.players || [];
-    const player1 = players[0];
-    const player2 = players[1];
 
     const getReasonText = () => {
         switch (result.reason) {
-            case 'ko': return '💀 Knockout!';
-            case 'timeout': return '⏱️ Time Up!';
-            case 'tie': return "🤝 It's a Tie!";
-            case 'disconnect': return '🔌 Opponent Disconnected';
-            default: return '⚔️ Match Over';
+            case 'ko': return 'Knockout';
+            case 'timeout': return 'Time Up';
+            case 'tie': return 'Draw';
+            case 'disconnect': return 'Opponent Disconnected';
+            case 'complete': return 'Match Complete';
+            case 'abandoned': return 'Match Abandoned';
+            default: return 'Match Over';
         }
     };
 
+    const mainColor = isDraw ? 'var(--c-amber)' : (isWinner ? 'var(--c-green)' : 'var(--c-red)');
+    const accentRgba = isDraw ? 'rgba(251,191,36,' : (isWinner ? 'rgba(52,211,153,' : 'rgba(248,113,113,');
+
+    // Sort players by score descending for multi-player modes
+    const sortedPlayers = [...players].sort((a, b) => (result.scores?.[b.id] || b.score || 0) - (result.scores?.[a.id] || a.score || 0));
+
+    const isDuel = gameType === 'duel' && players.length === 2;
+
     return (
         <div className="screen fade-in" style={{
-            background: isWinner
-                ? 'radial-gradient(ellipse at center, rgba(34, 197, 94, 0.1) 0%, transparent 70%)'
-                : isDraw
-                    ? 'radial-gradient(ellipse at center, rgba(251, 191, 36, 0.1) 0%, transparent 70%)'
-                    : 'radial-gradient(ellipse at center, rgba(239, 68, 68, 0.1) 0%, transparent 70%)'
+            background: `radial-gradient(ellipse at center, ${accentRgba}0.06) 0%, transparent 70%)`,
         }}>
-            <div className="card" style={{
-                textAlign: 'center',
-                maxWidth: '550px',
-                width: '100%',
-                position: 'relative',
-                overflow: 'visible'
+            <div className="panel" style={{
+                textAlign: 'center', maxWidth: '520px', width: '100%',
             }}>
-                {/* Decorative glow */}
+                {/* Game Mode Label */}
                 <div style={{
-                    position: 'absolute',
-                    top: '-50px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '200px',
-                    height: '200px',
-                    background: isWinner
-                        ? 'radial-gradient(circle, rgba(34, 197, 94, 0.3) 0%, transparent 70%)'
-                        : isDraw
-                            ? 'radial-gradient(circle, rgba(251, 191, 36, 0.3) 0%, transparent 70%)'
-                            : 'radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%)',
-                    pointerEvents: 'none',
-                    zIndex: -1
-                }}></div>
-
-                {/* Result Icon */}
-                <div style={{
-                    fontSize: '5rem',
-                    marginBottom: '16px',
-                    animation: 'victoryPulse 1.5s ease-in-out infinite'
+                    fontSize: '0.65rem', fontWeight: 700, letterSpacing: '3px',
+                    color: 'var(--c-text-off)', marginBottom: 'var(--sp-2)',
+                    textTransform: 'uppercase',
                 }}>
-                    {isDraw ? '🤝' : (isWinner ? '🏆' : '💀')}
+                    {MODE_LABELS[gameType] || gameType}
                 </div>
 
-                {/* Result Header */}
-                <h1 className="victory-message" style={{
-                    color: isDraw ? '#fbbf24' : (isWinner ? '#22c55e' : '#ef4444'),
-                    marginBottom: '8px'
+                {/* Result */}
+                <h1 style={{
+                    fontFamily: 'var(--f-mono)', fontSize: 'clamp(2rem, 7vw, 3rem)',
+                    fontWeight: 900, letterSpacing: '6px',
+                    color: mainColor,
+                    textShadow: `0 0 40px ${accentRgba}0.4)`,
+                    marginBottom: 'var(--sp-2)',
                 }}>
                     {isDraw ? 'DRAW' : (isWinner ? 'VICTORY' : 'DEFEAT')}
                 </h1>
-
                 <p style={{
-                    fontSize: '1.1rem',
-                    color: 'rgba(255,255,255,0.7)',
-                    marginBottom: '32px'
-                }}>
-                    {getReasonText()}
-                </p>
+                    color: 'var(--c-text-dim)', fontSize: '0.85rem',
+                    marginBottom: 'var(--sp-6)',
+                }}>{getReasonText()}</p>
 
-                {/* Score Display */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '24px',
-                    padding: '24px',
-                    background: 'rgba(0,0,0,0.3)',
-                    borderRadius: '16px',
-                    marginBottom: '24px'
-                }}>
-                    {/* Player 1 */}
+                {/* Duel Layout (2 players with health) */}
+                {isDuel && (
                     <div style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '16px',
-                        background: player1?.id === result.winner
-                            ? 'rgba(34, 197, 94, 0.15)'
-                            : 'transparent',
-                        borderRadius: '12px',
-                        border: player1?.id === result.winner
-                            ? '2px solid rgba(34, 197, 94, 0.3)'
-                            : '2px solid transparent'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: 'var(--sp-5)', padding: 'var(--sp-5)',
+                        background: 'var(--c-surface)', borderRadius: 'var(--r-lg)',
+                        border: '1px solid var(--c-border)',
+                        marginBottom: 'var(--sp-5)',
                     }}>
-                        <div style={{
-                            fontSize: '2.5rem',
-                            fontWeight: 900,
-                            color: player1?.id === result.winner ? '#22c55e' : '#ef4444',
-                            textShadow: player1?.id === result.winner
-                                ? '0 0 20px rgba(34, 197, 94, 0.5)'
-                                : '0 0 20px rgba(239, 68, 68, 0.5)'
-                        }}>
-                            {result.finalScores?.player1Health || 0}%
-                        </div>
-                        <div style={{
-                            color: 'rgba(255,255,255,0.7)',
-                            fontSize: '0.9rem',
-                            marginTop: '8px',
-                            fontWeight: 600,
-                            letterSpacing: '1px'
-                        }}>
-                            {cleanName(player1?.username, 'PLAYER 1')}
-                        </div>
-                        {player1?.id === result.winner && (
-                            <div style={{
-                                marginTop: '8px',
-                                color: '#fbbf24',
-                                fontSize: '0.75rem',
-                                fontWeight: 700
-                            }}>
-                                👑 WINNER
-                            </div>
-                        )}
+                        {players.map((p, i) => (
+                            <React.Fragment key={p.id}>
+                                {i === 1 && (
+                                    <div style={{
+                                        color: 'var(--c-text-off)', fontSize: '0.8rem',
+                                        fontWeight: 800, letterSpacing: '4px',
+                                    }}>VS</div>
+                                )}
+                                <div style={{ flex: 1, textAlign: 'center' }}>
+                                    <div style={{
+                                        fontFamily: 'var(--f-mono)', fontSize: '2rem',
+                                        fontWeight: 800,
+                                        color: p.id === result.winner ? 'var(--c-green)' : 'var(--c-red)',
+                                    }}>
+                                        {result.scores?.[p.id] ?? (i === 0 ? result.finalScores?.player1Health : result.finalScores?.player2Health) ?? 0}
+                                    </div>
+                                    <div style={{
+                                        fontSize: '0.8rem', fontWeight: 600,
+                                        color: 'var(--c-text-dim)', marginTop: 'var(--sp-1)',
+                                        letterSpacing: '0.5px',
+                                    }}>
+                                        {cleanName(p.username, `PLAYER ${i + 1}`)}
+                                    </div>
+                                    {p.id === result.winner && (
+                                        <div style={{
+                                            marginTop: 'var(--sp-2)', fontSize: '0.65rem', fontWeight: 700,
+                                            color: 'var(--c-amber)', letterSpacing: '2px',
+                                        }}>WINNER</div>
+                                    )}
+                                </div>
+                            </React.Fragment>
+                        ))}
                     </div>
+                )}
 
-                    {/* VS */}
+                {/* Multi-Player Scoreboard Layout */}
+                {!isDuel && (
                     <div style={{
-                        color: 'rgba(255,255,255,0.2)',
-                        fontSize: '1.5rem',
-                        fontWeight: 900,
-                        letterSpacing: '4px'
+                        display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)',
+                        marginBottom: 'var(--sp-5)',
                     }}>
-                        VS
+                        {sortedPlayers.map((p, idx) => {
+                            const score = result.scores?.[p.id] ?? p.score ?? 0;
+                            const isMe = p.id === playerId;
+                            const isMatchWinner = p.id === result.winner;
+                            return (
+                                <div key={p.id} style={{
+                                    display: 'flex', alignItems: 'center',
+                                    gap: 'var(--sp-3)', padding: 'var(--sp-3) var(--sp-4)',
+                                    background: isMe ? 'rgba(139,92,246,0.08)' : 'var(--c-surface)',
+                                    border: `1px solid ${isMatchWinner ? 'rgba(251,191,36,0.3)' : isMe ? 'rgba(139,92,246,0.2)' : 'var(--c-border)'}`,
+                                    borderRadius: 'var(--r-md)',
+                                }}>
+                                    {/* Rank */}
+                                    <div style={{
+                                        fontFamily: 'var(--f-mono)', fontSize: '1rem',
+                                        fontWeight: 800, width: '28px', textAlign: 'center',
+                                        color: idx === 0 ? 'var(--c-amber)' : idx === 1 ? 'var(--c-text-dim)' : 'var(--c-text-off)',
+                                    }}>
+                                        #{idx + 1}
+                                    </div>
+                                    {/* Name */}
+                                    <div style={{
+                                        flex: 1, fontWeight: 600, fontSize: '0.875rem',
+                                        color: isMe ? 'var(--c-primary-l)' : 'var(--c-text)',
+                                    }}>
+                                        {cleanName(p.username, 'PLAYER')}
+                                        {isMatchWinner && (
+                                            <span style={{
+                                                marginLeft: '8px', fontSize: '0.6rem', fontWeight: 700,
+                                                color: 'var(--c-amber)', letterSpacing: '1px',
+                                            }}>WINNER</span>
+                                        )}
+                                        {isMe && !isMatchWinner && (
+                                            <span style={{
+                                                marginLeft: '8px', fontSize: '0.6rem', fontWeight: 600,
+                                                color: 'var(--c-text-off)', letterSpacing: '1px',
+                                            }}>YOU</span>
+                                        )}
+                                    </div>
+                                    {/* Score */}
+                                    <div style={{
+                                        fontFamily: 'var(--f-mono)', fontSize: '1.1rem',
+                                        fontWeight: 800,
+                                        color: idx === 0 ? 'var(--c-amber)' : 'var(--c-text)',
+                                    }}>
+                                        {score}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
-
-                    {/* Player 2 */}
-                    <div style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '16px',
-                        background: player2?.id === result.winner
-                            ? 'rgba(34, 197, 94, 0.15)'
-                            : 'transparent',
-                        borderRadius: '12px',
-                        border: player2?.id === result.winner
-                            ? '2px solid rgba(34, 197, 94, 0.3)'
-                            : '2px solid transparent'
-                    }}>
-                        <div style={{
-                            fontSize: '2.5rem',
-                            fontWeight: 900,
-                            color: player2?.id === result.winner ? '#22c55e' : '#ef4444',
-                            textShadow: player2?.id === result.winner
-                                ? '0 0 20px rgba(34, 197, 94, 0.5)'
-                                : '0 0 20px rgba(239, 68, 68, 0.5)'
-                        }}>
-                            {result.finalScores?.player2Health || 0}%
-                        </div>
-                        <div style={{
-                            color: 'rgba(255,255,255,0.7)',
-                            fontSize: '0.9rem',
-                            marginTop: '8px',
-                            fontWeight: 600,
-                            letterSpacing: '1px'
-                        }}>
-                            {cleanName(player2?.username, 'PLAYER 2')}
-                        </div>
-                        {player2?.id === result.winner && (
-                            <div style={{
-                                marginTop: '8px',
-                                color: '#fbbf24',
-                                fontSize: '0.75rem',
-                                fontWeight: 700
-                            }}>
-                                👑 WINNER
-                            </div>
-                        )}
-                    </div>
-                </div>
+                )}
 
                 {/* ELO Change */}
                 {eloChange !== undefined && (
                     <div style={{
-                        background: eloChange >= 0
-                            ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1))'
-                            : 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1))',
-                        padding: '16px 24px',
-                        borderRadius: '12px',
-                        marginBottom: '24px',
-                        border: eloChange >= 0
-                            ? '1px solid rgba(34, 197, 94, 0.3)'
-                            : '1px solid rgba(239, 68, 68, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '12px'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: 'var(--sp-3)', padding: 'var(--sp-4)',
+                        borderRadius: 'var(--r-md)',
+                        background: `${eloChange >= 0 ? 'rgba(52,211,153,' : 'rgba(248,113,113,'}0.06)`,
+                        border: `1px solid ${eloChange >= 0 ? 'rgba(52,211,153,' : 'rgba(248,113,113,'}0.15)`,
+                        marginBottom: 'var(--sp-5)',
                     }}>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
-                            ELO Change:
-                        </span>
+                        <span style={{ color: 'var(--c-text-dim)', fontSize: '0.8rem' }}>ELO</span>
                         <span style={{
-                            fontSize: '1.5rem',
-                            fontWeight: 900,
-                            color: eloChange >= 0 ? '#22c55e' : '#ef4444',
-                            textShadow: eloChange >= 0
-                                ? '0 0 10px rgba(34, 197, 94, 0.5)'
-                                : '0 0 10px rgba(239, 68, 68, 0.5)'
+                            fontFamily: 'var(--f-mono)', fontSize: '1.3rem', fontWeight: 800,
+                            color: eloChange >= 0 ? 'var(--c-green)' : 'var(--c-red)',
                         }}>
                             {eloChange >= 0 ? '+' : ''}{eloChange}
                         </span>
                     </div>
                 )}
 
-                {/* Play Again Button */}
-                <button
-                    onClick={onPlayAgain}
-                    className="btn btn-primary"
-                    style={{
-                        width: '100%',
-                        padding: '18px',
-                        fontSize: '1.1rem'
-                    }}
-                >
-                    ⚔️ Play Again
+                <button className="btn2 btn2--primary btn2--block btn2--lg" onClick={onPlayAgain}>
+                    {BRAND.returnToHub}
                 </button>
             </div>
         </div>

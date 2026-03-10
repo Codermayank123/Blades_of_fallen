@@ -1,210 +1,121 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { BRAND, MODE_LABELS } from '../config/brand.js';
+
+const GAME_MODES = [
+    { id: 'duel', label: 'Arena Duel', desc: '1v1 combat — reduce HP to zero', color: '#ef4444', players: '2', tag: 'PVP' },
+    { id: 'bomb_relay', label: 'Bomb Relay Royale', desc: 'Pass the bomb — last survivor wins!', color: '#FF3D81', players: '3–10', tag: 'SURVIVAL' },
+    { id: 'territory', label: 'Gem Heist Arena', desc: 'Collect & deposit gems — steal from rivals!', color: '#7B61FF', players: '2–8', tag: 'ACTION' },
+    { id: 'neon_drift', label: 'Neon Drift Racing', desc: 'Race 3 laps — first to finish wins!', color: '#00F5FF', players: '2–12', tag: 'RACING' },
+    { id: 'cricket_pro', label: 'Cricket Clash Pro', desc: 'Bowl & bat — outsmart your opponent!', color: '#00FF9C', players: '2', tag: 'CRICKET' },
+];
 
 export default function LobbyScreen({
-    username,
-    user,
-    roomInfo,
-    onCreateRoom,
-    onJoinRoom,
+    roomInfo, user, onCreateRoom, onJoinRoom, onReady,
+    onLeaveRoom, onLogout, onNavigate,
     onQuickMatch,
-    onReady,
-    onLeaveRoom,
-    onProfile,
-    onLeaderboard,
-    onLogout,
-    onRefreshUser // New prop to refresh user data
 }) {
+    const [selectedMode, setSelectedMode] = useState(null);
     const [joinCode, setJoinCode] = useState('');
-    const [currentUser, setCurrentUser] = useState(user);
 
-    // Auto-detect production vs development
-    const isProduction = window.location.protocol === 'https:';
-    const API_URL = import.meta.env.VITE_API_URL || (isProduction
-        ? `https://${window.location.hostname.replace('frontend', 'backend')}/api`
-        : 'http://localhost:3001/api');
-
-    // Refresh user stats when lobby screen mounts
-    useEffect(() => {
-        const refreshStats = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-
-                const res = await fetch(`${API_URL}/auth/me`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setCurrentUser(data);
-                    // Also update parent state if callback provided
-                    if (onRefreshUser) {
-                        onRefreshUser(data);
-                    }
-                }
-            } catch (err) {
-                console.log('Failed to refresh stats');
-            }
-        };
-
-        refreshStats();
-    }, []); // Run once on mount
-
-    // Update local user when prop changes
-    useEffect(() => {
-        if (user) {
-            setCurrentUser(user);
-        }
-    }, [user]);
-
-    // Clean player name helper
-    const cleanName = (name, fallback) => {
-        if (!name) return fallback;
-        let clean = name.includes('_') ? name.split('_')[0] : name;
-        return clean.toUpperCase();
-    };
-
-    // In a room
+    /* ─── Room View ──────────────────────────── */
     if (roomInfo) {
+        const myPlayer = roomInfo.players?.find(p => p.id === user?.id);
+        const isReady = myPlayer?.ready;
+
         return (
-            <div className="screen fade-in">
-                <div className="card" style={{ textAlign: 'center', maxWidth: '520px', width: '100%' }}>
-                    {/* Room Header */}
-                    <div style={{ marginBottom: '24px' }}>
-                        <h2 style={{
-                            fontSize: '1.8rem',
-                            marginBottom: '8px',
-                            background: 'linear-gradient(135deg, #fff, #a855f7)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent'
-                        }}>
-                            ⚔️ Battle Room
-                        </h2>
-                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
-                            Share this code with your opponent
-                        </p>
-                    </div>
-
+            <div className="screen fade-in" style={{ padding: 'var(--sp-4)', paddingTop: '80px' }}>
+                <div className="panel" style={{ maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+                    <div className="section-label">Room</div>
                     {/* Room Code */}
-                    <div className="room-code">{roomInfo.roomCode}</div>
-
-                    {/* Players List */}
                     <div style={{
-                        background: 'rgba(0,0,0,0.3)',
-                        borderRadius: '16px',
-                        padding: '20px',
-                        margin: '24px 0'
+                        fontFamily: 'var(--f-mono)', fontSize: '2rem', fontWeight: 700,
+                        letterSpacing: '10px', padding: 'var(--sp-5) var(--sp-8)',
+                        background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)',
+                        borderRadius: 'var(--r-lg)', marginBottom: 'var(--sp-5)',
+                        color: 'var(--c-amber)',
                     }}>
-                        <h3 style={{
-                            fontSize: '0.9rem',
-                            color: 'rgba(255,255,255,0.5)',
-                            marginBottom: '16px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '2px'
-                        }}>
-                            Warriors ({roomInfo.players?.length || 0}/2)
-                        </h3>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {roomInfo.players?.map((player, i) => (
-                                <div
-                                    key={player.id || i}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '16px 20px',
-                                        background: player.ready
-                                            ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1))'
-                                            : 'rgba(255, 255, 255, 0.05)',
-                                        borderRadius: '12px',
-                                        border: player.ready
-                                            ? '2px solid rgba(34, 197, 94, 0.5)'
-                                            : '2px solid rgba(255, 255, 255, 0.1)',
-                                        transition: 'all 0.3s ease',
-                                        boxShadow: player.ready
-                                            ? '0 0 20px rgba(34, 197, 94, 0.2)'
-                                            : 'none',
-                                        flexWrap: 'wrap',
-                                        gap: '10px'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: '50%',
-                                            background: i === 0
-                                                ? 'linear-gradient(135deg, #a855f7, #7c3aed)'
-                                                : 'linear-gradient(135deg, #06b6d4, #0891b2)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '1.2rem',
-                                            flexShrink: 0
-                                        }}>
-                                            {i === 0 ? '⚔️' : '🗡️'}
-                                        </div>
-                                        <span style={{
-                                            fontSize: '1.1rem',
-                                            fontWeight: 700,
-                                            color: player.ready ? '#22c55e' : '#fff',
-                                            letterSpacing: '1px'
-                                        }}>
-                                            {cleanName(player.username, `Player ${i + 1}`)}
-                                        </span>
-                                    </div>
-
-                                    {player.ready ? (
-                                        <span style={{
-                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                            color: 'white',
-                                            padding: '6px 16px',
-                                            borderRadius: '20px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 700,
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '1px',
-                                            boxShadow: '0 0 15px rgba(34, 197, 94, 0.4)'
-                                        }}>
-                                            ✓ Ready
-                                        </span>
-                                    ) : (
-                                        <span style={{
-                                            color: 'rgba(255, 255, 255, 0.4)',
-                                            fontSize: '0.8rem',
-                                            fontStyle: 'italic'
-                                        }}>
-                                            Waiting...
-                                        </span>
-                                    )}
-                                </div>
-                            ))}
-
-                            {/* Empty slot */}
-                            {roomInfo.players?.length < 2 && (
-                                <div style={{
-                                    padding: '20px',
-                                    border: '2px dashed rgba(255, 255, 255, 0.2)',
-                                    borderRadius: '12px',
-                                    color: 'rgba(255, 255, 255, 0.3)',
-                                    textAlign: 'center',
-                                    fontSize: '0.9rem'
-                                }}>
-                                    Waiting for opponent...
-                                </div>
-                            )}
-                        </div>
+                        {roomInfo.roomCode || '????'}
                     </div>
 
-                    {/* Actions */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {roomInfo.players?.length === 2 && (
-                            <button onClick={onReady} className="btn btn-primary" style={{ width: '100%' }}>
-                                ⚔️ Ready for Battle!
-                            </button>
-                        )}
-                        <button onClick={onLeaveRoom} className="btn" style={{ width: '100%' }}>
-                            Leave Room
+                    <p style={{ color: 'var(--c-text-dim)', fontSize: '0.8rem', marginBottom: 'var(--sp-3)' }}>
+                        Mode: <strong style={{ color: 'var(--c-primary-l)' }}>
+                            {MODE_LABELS[roomInfo.gameType] || roomInfo.gameType}
+                        </strong>
+                    </p>
+
+                    {/* Player count */}
+                    <p style={{ color: 'var(--c-text-off)', fontSize: '0.75rem', marginBottom: 'var(--sp-3)' }}>
+                        Players: <strong style={{ color: 'var(--c-primary-l)' }}>
+                            {roomInfo.playerCount || roomInfo.players?.length || 0}
+                        </strong> / {roomInfo.maxPlayers || '?'}
+                    </p>
+
+                    {/* Countdown timer */}
+                    {roomInfo.countdown > 0 && (
+                        <div style={{
+                            padding: 'var(--sp-3) var(--sp-4)',
+                            background: 'rgba(251,191,36,0.08)',
+                            border: '1px solid rgba(251,191,36,0.25)',
+                            borderRadius: 'var(--r-md)',
+                            marginBottom: 'var(--sp-4)',
+                            textAlign: 'center',
+                        }}>
+                            <div style={{
+                                fontFamily: 'var(--f-mono)', fontSize: '1.5rem',
+                                fontWeight: 800, color: 'var(--c-amber)',
+                            }}>
+                                {roomInfo.countdown}s
+                            </div>
+                            <div style={{
+                                fontSize: '0.7rem', color: 'var(--c-text-dim)', marginTop: '2px',
+                            }}>
+                                {roomInfo.countdownMessage || 'Waiting for players...'}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Player list */}
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)',
+                        marginBottom: 'var(--sp-5)',
+                    }}>
+                        {(roomInfo.players || []).map(p => (
+                            <div key={p.id} style={{
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                padding: 'var(--sp-3) var(--sp-4)',
+                                background: p.ready ? 'rgba(52,211,153,0.06)' : 'var(--c-surface)',
+                                border: `1px solid ${p.ready ? 'rgba(52,211,153,0.15)' : 'var(--c-border)'}`,
+                                borderRadius: 'var(--r-md)',
+                            }}>
+                                <span style={{
+                                    fontWeight: 600,
+                                    color: p.id === user?.id ? 'var(--c-green)' : 'var(--c-text)',
+                                    fontSize: '0.875rem',
+                                }}>
+                                    {p.username?.split('_')[0] || p.username}
+                                    {p.id === roomInfo.host && <span style={{ color: 'var(--c-amber)', marginLeft: '6px', fontSize: '0.7rem' }}>HOST</span>}
+                                </span>
+                                <span style={{
+                                    fontSize: '0.7rem', fontWeight: 600, letterSpacing: '1px',
+                                    color: p.ready ? 'var(--c-green)' : 'var(--c-text-off)',
+                                    textTransform: 'uppercase',
+                                }}>
+                                    {p.ready ? 'Ready' : 'Waiting'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 'var(--sp-3)' }}>
+                        <button className="btn2 btn2--ghost" onClick={onLeaveRoom} style={{ flex: 1 }}>
+                            Leave
+                        </button>
+                        <button
+                            className={`btn2 ${isReady ? 'btn2--cyan' : 'btn2--primary'}`}
+                            onClick={onReady}
+                            style={{ flex: 2 }}
+                        >
+                            {isReady ? 'Unready' : 'Ready Up'}
                         </button>
                     </div>
                 </div>
@@ -212,209 +123,169 @@ export default function LobbyScreen({
         );
     }
 
-    // Lobby (no room)
+    /* ─── Main Lobby ─────────────────────────── */
     return (
-        <div className="screen fade-in" style={{ padding: '16px' }}>
-            <div className="card" style={{
-                maxWidth: '500px',
-                width: '100%',
-                textAlign: 'center',
-                padding: '24px'
-            }}>
-                {/* Navigation - INSIDE the card at top */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginBottom: '24px',
-                    flexWrap: 'wrap'
-                }}>
-                    <button
-                        onClick={onProfile}
-                        className="btn"
-                        style={{
-                            padding: '8px 16px',
-                            fontSize: '0.75rem',
-                            letterSpacing: '1px'
-                        }}
-                    >
-                        👤 Profile
-                    </button>
-                    <button
-                        onClick={onLeaderboard}
-                        className="btn"
-                        style={{
-                            padding: '8px 16px',
-                            fontSize: '0.75rem',
-                            letterSpacing: '1px'
-                        }}
-                    >
-                        🏆 Ranks
-                    </button>
-                    <button
-                        onClick={onLogout}
-                        className="btn"
-                        style={{
-                            padding: '8px 16px',
-                            fontSize: '0.75rem',
-                            letterSpacing: '1px'
-                        }}
-                    >
-                        🚪 Logout
-                    </button>
-                </div>
-
+        <div className="screen fade-in" style={{
+            padding: 'var(--sp-4)', paddingTop: '80px',
+            justifyContent: 'flex-start', minHeight: '100vh',
+        }}>
+            <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto' }}>
                 {/* Welcome */}
-                <div style={{ marginBottom: '28px' }}>
+                <div style={{ textAlign: 'center', marginBottom: 'var(--sp-6)' }}>
                     <h1 style={{
-                        fontSize: 'clamp(1.5rem, 5vw, 2.2rem)',
-                        marginBottom: '12px',
-                        background: 'linear-gradient(135deg, #fff, #a855f7)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
+                        fontFamily: 'var(--f-mono)', fontSize: 'clamp(1.1rem, 4vw, 1.5rem)',
+                        fontWeight: 800, letterSpacing: '4px', color: 'var(--c-primary-l)',
+                        marginBottom: 'var(--sp-1)',
                     }}>
-                        Welcome, Warrior
+                        {BRAND.hub.toUpperCase()}
                     </h1>
                     <p style={{
-                        color: '#a855f7',
-                        fontSize: 'clamp(0.9rem, 3vw, 1.1rem)',
-                        fontWeight: 600,
-                        letterSpacing: '2px'
+                        color: 'var(--c-text-off)', fontSize: '0.75rem',
+                        letterSpacing: '2px', textTransform: 'uppercase',
                     }}>
-                        {cleanName(username || user?.username, 'WARRIOR')}
+                        {BRAND.tagline}
                     </p>
                 </div>
 
-                {/* Quick Match */}
-                <button
-                    onClick={onQuickMatch}
-                    className="btn btn-primary"
-                    style={{
-                        width: '100%',
-                        padding: '18px',
-                        fontSize: 'clamp(0.9rem, 3vw, 1.1rem)',
-                        marginBottom: '20px'
-                    }}
-                >
-                    ⚔️ Quick Match
-                </button>
+                {/* Mode Grid — 2 col on mobile, 3 col on desktop */}
+                <div className="section-label">Select Mode</div>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                    gap: 'var(--sp-3)',
+                    marginBottom: 'var(--sp-5)',
+                }}>
+                    {GAME_MODES.map(mode => {
+                        const active = selectedMode === mode.id;
+                        return (
+                            <div
+                                key={mode.id}
+                                onClick={() => setSelectedMode(active ? null : mode.id)}
+                                style={{
+                                    padding: 'var(--sp-4) var(--sp-4) var(--sp-3)',
+                                    borderRadius: 'var(--r-lg)',
+                                    background: active
+                                        ? `linear-gradient(135deg, ${mode.color}11, ${mode.color}08)`
+                                        : 'var(--c-surface)',
+                                    border: `1.5px solid ${active ? mode.color : 'var(--c-border)'}`,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    transform: active ? 'scale(1.02)' : 'scale(1)',
+                                }}
+                                onMouseEnter={e => {
+                                    if (!active) e.currentTarget.style.borderColor = `${mode.color}60`;
+                                }}
+                                onMouseLeave={e => {
+                                    if (!active) e.currentTarget.style.borderColor = 'var(--c-border)';
+                                }}
+                            >
+                                {/* Tag */}
+                                <div style={{
+                                    fontSize: '0.55rem', fontWeight: 800, letterSpacing: '2px',
+                                    color: mode.color, marginBottom: 'var(--sp-2)', opacity: 0.8,
+                                }}>
+                                    {mode.tag}
+                                </div>
 
-                <div className="divider">
-                    <span>or</span>
+                                {/* Title */}
+                                <div style={{
+                                    fontWeight: 700, fontSize: '0.9rem',
+                                    color: active ? mode.color : 'var(--c-text)',
+                                    marginBottom: 'var(--sp-1)',
+                                    transition: 'color 0.2s',
+                                }}>
+                                    {mode.label}
+                                </div>
+
+                                {/* Desc */}
+                                <div style={{
+                                    fontSize: '0.7rem', color: 'var(--c-text-off)', lineHeight: 1.4,
+                                    marginBottom: 'var(--sp-2)',
+                                }}>
+                                    {mode.desc}
+                                </div>
+
+                                {/* Footer row */}
+                                <div style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                }}>
+                                    <span style={{
+                                        fontSize: '0.65rem', fontWeight: 600, color: mode.color,
+                                    }}>
+                                        {mode.players} players
+                                    </span>
+                                    {active && (
+                                        <span style={{
+                                            width: '6px', height: '6px', borderRadius: '50%',
+                                            background: mode.color,
+                                            boxShadow: `0 0 8px ${mode.color}`,
+                                        }} />
+                                    )}
+                                </div>
+
+                                {/* Active glow line */}
+                                {active && (
+                                    <div style={{
+                                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                                        height: '2px',
+                                        background: `linear-gradient(90deg, transparent, ${mode.color}, transparent)`,
+                                    }} />
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
 
-                {/* Create/Join Room - Stacked on mobile */}
+                {/* Actions — always visible, disabled when no mode selected */}
                 <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    marginTop: '20px'
+                    display: 'grid', gridTemplateColumns: '1fr 1fr',
+                    gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)',
                 }}>
                     <button
-                        onClick={onCreateRoom}
-                        className="btn btn-secondary"
-                        style={{ width: '100%', padding: '14px' }}
+                        className="btn2 btn2--primary btn2--lg"
+                        onClick={() => selectedMode && onQuickMatch(selectedMode)}
+                        disabled={!selectedMode}
+                        style={{ opacity: selectedMode ? 1 : 0.4 }}
                     >
-                        🏰 Create Room
+                        {BRAND.quickPlay}
                     </button>
-
-                    <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        flexWrap: 'wrap'
-                    }}>
-                        <input
-                            type="text"
-                            placeholder="Room Code"
-                            value={joinCode}
-                            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                            className="input"
-                            style={{
-                                flex: 1,
-                                minWidth: '120px',
-                                textAlign: 'center',
-                                letterSpacing: '4px',
-                                textTransform: 'uppercase',
-                                fontWeight: 600
-                            }}
-                            maxLength={6}
-                        />
-                        <button
-                            onClick={() => joinCode && onJoinRoom(joinCode)}
-                            className="btn"
-                            disabled={!joinCode}
-                            style={{
-                                opacity: joinCode ? 1 : 0.5,
-                                minWidth: '80px'
-                            }}
-                        >
-                            Join
-                        </button>
-                    </div>
+                    <button
+                        className="btn2 btn2--lg"
+                        onClick={() => selectedMode && onCreateRoom(selectedMode)}
+                        disabled={!selectedMode}
+                        style={{ opacity: selectedMode ? 1 : 0.4 }}
+                    >
+                        {BRAND.hostArena}
+                    </button>
                 </div>
 
-                {/* Stats preview */}
-                {currentUser && (
-                    <div style={{
-                        marginTop: '28px',
-                        padding: '16px',
-                        background: 'rgba(0,0,0,0.3)',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        justifyContent: 'space-around',
-                        flexWrap: 'wrap',
-                        gap: '16px'
-                    }}>
-                        <div style={{ textAlign: 'center', minWidth: '60px' }}>
-                            <div style={{
-                                fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
-                                fontWeight: 700,
-                                color: '#fbbf24'
-                            }}>
-                                {currentUser.elo || 1000}
-                            </div>
-                            <div style={{
-                                fontSize: '0.65rem',
-                                color: 'rgba(255,255,255,0.5)',
-                                textTransform: 'uppercase'
-                            }}>
-                                ELO
-                            </div>
-                        </div>
-                        <div style={{ textAlign: 'center', minWidth: '60px' }}>
-                            <div style={{
-                                fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
-                                fontWeight: 700,
-                                color: '#22c55e'
-                            }}>
-                                {currentUser.stats?.wins || 0}
-                            </div>
-                            <div style={{
-                                fontSize: '0.65rem',
-                                color: 'rgba(255,255,255,0.5)',
-                                textTransform: 'uppercase'
-                            }}>
-                                Wins
-                            </div>
-                        </div>
-                        <div style={{ textAlign: 'center', minWidth: '60px' }}>
-                            <div style={{
-                                fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
-                                fontWeight: 700,
-                                color: '#ef4444'
-                            }}>
-                                {currentUser.stats?.losses || 0}
-                            </div>
-                            <div style={{
-                                fontSize: '0.65rem',
-                                color: 'rgba(255,255,255,0.5)',
-                                textTransform: 'uppercase'
-                            }}>
-                                Losses
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* Join room */}
+                <div className="divider2" style={{ margin: 'var(--sp-4) 0' }} />
+                <div className="section-label">Join a Room</div>
+                <div style={{
+                    display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-8)',
+                    maxWidth: '400px',
+                }}>
+                    <input
+                        className="input2"
+                        placeholder="Room code"
+                        value={joinCode}
+                        onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                        maxLength={6}
+                        style={{ fontFamily: 'var(--f-mono)', letterSpacing: '4px', textAlign: 'center' }}
+                    />
+                    <button
+                        className="btn2 btn2--cyan"
+                        onClick={() => { if (joinCode.length >= 4) onJoinRoom(joinCode); }}
+                        disabled={joinCode.length < 4}
+                    >
+                        Join
+                    </button>
+                </div>
+
+                <button className="btn2 btn2--ghost" onClick={onLogout}>Logout</button>
             </div>
         </div>
     );

@@ -96,10 +96,9 @@ body::before {
 
 .app {
     min-height: 100vh;
+    width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
     position: relative;
 }
 
@@ -273,8 +272,8 @@ body::before {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
+    width: 100%;
     padding: 2rem;
-    text-align: center;
 }
 
 /* ============================================
@@ -1047,7 +1046,4 @@ body::before {
     }
 }
 
-/* ============================================
-   GOOGLE FONTS IMPORT
-   ============================================ */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;900&display=swap');
+/* Fonts imported via theme.css */

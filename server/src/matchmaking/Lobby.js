@@ -1,6 +1,10 @@
 import { GameRoom } from '../game/GameRoom.js';
+import { BombRelayRoom } from '../game/BombRelayRoom.js';
+import { GemHeistRoom } from '../game/GemHeistRoom.js';
+import { NeonDriftRoom } from '../game/NeonDriftRoom.js';
+import { CricketProRoom } from '../game/CricketProRoom.js';
 import { generateRoomCode } from '../utils/validation.js';
-import { ROOM_STATES } from '../utils/constants.js';
+import { ROOM_STATES, GAME_PLAYER_LIMITS } from '../utils/constants.js';
 
 class Lobby {
     constructor() {
@@ -8,14 +12,32 @@ class Lobby {
         this.playerRooms = new Map(); // playerId -> roomCode
     }
 
-    createRoom(playerId) {
-        // Generate unique room code
+    createRoom(playerId, gameType = 'duel') {
         let roomCode;
         do {
             roomCode = generateRoomCode();
         } while (this.rooms.has(roomCode));
 
-        const room = new GameRoom(roomCode, playerId);
+        let room;
+        switch (gameType) {
+            case 'bomb_relay':
+                room = new BombRelayRoom(roomCode, playerId);
+                break;
+            case 'territory':
+                room = new GemHeistRoom(roomCode, playerId);
+                break;
+            case 'neon_drift':
+                room = new NeonDriftRoom(roomCode, playerId);
+                break;
+            case 'cricket_pro':
+                room = new CricketProRoom(roomCode, playerId);
+                break;
+            case 'duel':
+            default:
+                room = new GameRoom(roomCode, playerId);
+                break;
+        }
+
         this.rooms.set(roomCode, room);
         this.playerRooms.set(playerId, roomCode);
 
@@ -34,7 +56,8 @@ class Lobby {
             return { success: false, error: 'Game already in progress' };
         }
 
-        if (room.players.size >= 2) {
+        const maxPlayers = room.maxPlayers || (GAME_PLAYER_LIMITS[room.gameType]?.max || 2);
+        if (room.players.size >= maxPlayers) {
             return { success: false, error: 'Room is full' };
         }
 
@@ -55,8 +78,8 @@ class Lobby {
         if (room) {
             room.removePlayer(playerId);
 
-            // Cleanup empty rooms
             if (room.isEmpty()) {
+                if (room.cleanup) room.cleanup();
                 this.rooms.delete(roomCode);
             }
         }
@@ -73,17 +96,21 @@ class Lobby {
     getAvailableRooms() {
         const available = [];
         for (const room of this.rooms.values()) {
-            if (room.state === ROOM_STATES.WAITING && room.players.size < 2) {
+            const maxPlayers = room.maxPlayers || (GAME_PLAYER_LIMITS[room.gameType]?.max || 2);
+            if (room.state === ROOM_STATES.WAITING && room.players.size < maxPlayers) {
                 available.push(room.getInfo());
             }
         }
         return available;
     }
 
-    // Find a room with one player waiting
-    findAvailableRoom() {
+    findAvailableRoom(gameType = 'duel') {
         for (const room of this.rooms.values()) {
-            if (room.state === ROOM_STATES.WAITING && room.players.size === 1) {
+            const maxPlayers = room.maxPlayers || (GAME_PLAYER_LIMITS[room.gameType]?.max || 2);
+            if (room.state === ROOM_STATES.WAITING &&
+                room.players.size > 0 &&
+                room.players.size < maxPlayers &&
+                (room.gameType || 'duel') === gameType) {
                 return room;
             }
         }

@@ -2,170 +2,151 @@ import { useState, useEffect, useRef } from 'react';
 
 export default function SplashScreen({ onEnter }) {
     const [showButton, setShowButton] = useState(false);
-    const [fadeOut, setFadeOut] = useState(false);
+    const [fading, setFading] = useState(false);
     const videoRef = useRef(null);
 
     useEffect(() => {
-        // Show the "Enter" button after a short delay
         const timer = setTimeout(() => setShowButton(true), 2000);
         return () => clearTimeout(timer);
     }, []);
 
     const handleEnter = () => {
-        setFadeOut(true);
-        setTimeout(() => onEnter(), 800);
+        setFading(true);
+        setTimeout(() => onEnter(), 600);
     };
 
+    // Generate floating particles matching Cyber Arena style
+    const particles = Array.from({ length: 20 }, (_, i) => ({
+        id: i,
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        size: 2 + Math.random() * 3,
+        delay: `${Math.random() * 4}s`,
+        dur: `${3 + Math.random() * 4}s`,
+    }));
+
     return (
-        <div
-            onClick={() => {
-                // Try to play video on click (mobile autoplay policy)
-                if (videoRef.current) {
-                    videoRef.current.play().catch(() => { });
-                }
-            }}
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100vh',
-                overflow: 'hidden',
-                zIndex: 9999,
-                opacity: fadeOut ? 0 : 1,
-                transition: 'opacity 0.8s ease-out',
-                cursor: 'pointer'
-            }}
-        >
-            {/* Background Video */}
+        <div style={{
+            position: 'fixed', inset: 0,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            background: 'linear-gradient(135deg, var(--c-bg) 0%, var(--c-surface) 40%, var(--c-bg) 100%)',
+            transition: 'opacity 0.6s ease',
+            opacity: fading ? 0 : 1,
+            zIndex: 9999, overflow: 'hidden',
+        }}>
+            {/* Background video */}
             <video
                 ref={videoRef}
-                autoPlay
-                loop
-                muted
-                playsInline
+                autoPlay muted loop playsInline
                 style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    minWidth: '100%',
-                    minHeight: '100%',
-                    width: 'auto',
-                    height: 'auto',
-                    objectFit: 'cover',
-                    zIndex: -1
+                    position: 'absolute', inset: 0,
+                    width: '100%', height: '100%',
+                    objectFit: 'cover', opacity: 0.1,
                 }}
+                onError={() => { if (videoRef.current) videoRef.current.style.display = 'none'; }}
             >
-                <source src="/video/page.mp4" type="video/mp4" />
+                <source src="/splash-bg.mp4" type="video/mp4" />
             </video>
 
-            {/* Dark overlay */}
+            {/* Animated grid overlay */}
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.06 }}>
+                {Array.from({ length: 20 }).map((_, i) => (
+                    <div key={i} style={{
+                        position: 'absolute', top: `${i * 5}%`, left: 0, right: 0,
+                        height: '1px',
+                        background: 'linear-gradient(90deg, transparent, var(--c-primary), transparent)',
+                    }} />
+                ))}
+                {Array.from({ length: 16 }).map((_, i) => (
+                    <div key={`v${i}`} style={{
+                        position: 'absolute', left: `${i * 6.25}%`, top: 0, bottom: 0,
+                        width: '1px',
+                        background: 'linear-gradient(180deg, transparent, var(--c-cyan), transparent)',
+                    }} />
+                ))}
+            </div>
+
+            {/* Central glow (matching WelcomeScreen) */}
             <div style={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%)',
-                zIndex: 0
+                width: '400px', height: '400px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, rgba(34,211,238,0.04) 50%, transparent 70%)',
+                filter: 'blur(50px)',
+                pointerEvents: 'none',
+                animation: 'splashGlowPulse 3s ease-in-out infinite',
             }} />
+
+            {/* Floating particles */}
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                {particles.map(p => (
+                    <div key={p.id} style={{
+                        position: 'absolute', left: p.left, top: p.top,
+                        width: p.size, height: p.size,
+                        borderRadius: '50%',
+                        background: p.id % 2 === 0 ? 'var(--c-primary)' : 'var(--c-cyan)',
+                        opacity: 0.4,
+                        animation: `splashFloat ${p.dur} ease-in-out ${p.delay} infinite alternate`,
+                    }} />
+                ))}
+            </div>
 
             {/* Content */}
             <div style={{
-                position: 'relative',
-                zIndex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                textAlign: 'center',
-                padding: '20px'
+                position: 'relative', zIndex: 1,
+                textAlign: 'center', padding: 'var(--sp-8)',
             }}>
-                {/* Title */}
                 <h1 style={{
-                    fontFamily: 'Cinzel Decorative, Cinzel, serif',
-                    fontSize: 'clamp(32px, 6vw, 72px)',
-                    color: '#c4a54d',
-                    textShadow: '0 0 40px rgba(196, 165, 77, 0.6), 0 4px 20px rgba(0,0,0,0.8)',
-                    marginBottom: '10px',
-                    letterSpacing: '4px',
-                    animation: 'titleGlow 3s ease-in-out infinite alternate'
+                    fontFamily: 'var(--f-mono)',
+                    fontSize: 'clamp(1.6rem, 6vw, 3rem)',
+                    fontWeight: 900,
+                    letterSpacing: '8px',
+                    background: 'linear-gradient(135deg, var(--c-primary-l), var(--c-cyan))',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    marginBottom: 'var(--sp-3)',
+                    animation: 'fadeIn 1s ease',
                 }}>
-                    BLADES OF THE FALLEN
+                    NEXUS ARENA
                 </h1>
 
-                {/* Subtitle */}
                 <p style={{
-                    fontFamily: 'Cinzel, serif',
-                    fontSize: 'clamp(14px, 2vw, 22px)',
-                    color: 'rgba(255,255,255,0.7)',
-                    letterSpacing: '6px',
+                    color: 'var(--c-text-off)',
+                    fontSize: '0.85rem',
+                    letterSpacing: '5px',
                     textTransform: 'uppercase',
-                    marginBottom: '60px'
+                    marginBottom: 'var(--sp-12)',
+                    animation: 'fadeIn 1.5s ease',
                 }}>
-                    Prepare for Battle
+                    Enter the Arena
                 </p>
 
-                {/* Sword divider */}
-                <div style={{
-                    fontSize: 'clamp(24px, 4vw, 48px)',
-                    marginBottom: '40px',
-                    animation: 'swordPulse 2s ease-in-out infinite'
-                }}>
-                    ⚔️
-                </div>
-
-                {/* Enter button */}
                 {showButton && (
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleEnter();
-                        }}
+                        className="btn2 btn2--primary btn2--lg"
+                        onClick={handleEnter}
                         style={{
-                            fontFamily: 'Cinzel, serif',
-                            fontSize: 'clamp(16px, 2.5vw, 24px)',
-                            padding: '16px 60px',
-                            background: 'linear-gradient(135deg, rgba(196,165,77,0.2) 0%, rgba(196,165,77,0.05) 100%)',
-                            border: '2px solid rgba(196, 165, 77, 0.6)',
-                            color: '#c4a54d',
-                            cursor: 'pointer',
+                            padding: '16px 48px',
                             letterSpacing: '4px',
-                            textTransform: 'uppercase',
-                            borderRadius: '4px',
-                            transition: 'all 0.3s ease',
-                            animation: 'fadeInUp 0.8s ease-out'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.background = 'linear-gradient(135deg, rgba(196,165,77,0.4) 0%, rgba(196,165,77,0.1) 100%)';
-                            e.target.style.borderColor = '#c4a54d';
-                            e.target.style.boxShadow = '0 0 30px rgba(196, 165, 77, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.background = 'linear-gradient(135deg, rgba(196,165,77,0.2) 0%, rgba(196,165,77,0.05) 100%)';
-                            e.target.style.borderColor = 'rgba(196, 165, 77, 0.6)';
-                            e.target.style.boxShadow = 'none';
+                            fontSize: '0.9rem',
+                            animation: 'fadeIn 0.5s ease',
                         }}
                     >
-                        Enter the Arena
+                        BEGIN
                     </button>
                 )}
             </div>
 
             <style>{`
-                @keyframes titleGlow {
-                    0% { text-shadow: 0 0 20px rgba(196, 165, 77, 0.4), 0 4px 20px rgba(0,0,0,0.8); }
-                    100% { text-shadow: 0 0 60px rgba(196, 165, 77, 0.8), 0 4px 20px rgba(0,0,0,0.8); }
+                @keyframes splashGlowPulse {
+                    0%, 100% { transform: scale(1); opacity: 0.6; }
+                    50% { transform: scale(1.15); opacity: 1; }
                 }
-                @keyframes swordPulse {
-                    0%, 100% { transform: scale(1); opacity: 0.8; }
-                    50% { transform: scale(1.2); opacity: 1; }
-                }
-                @keyframes fadeInUp {
-                    from { opacity: 0; transform: translateY(20px); }
-                    to { opacity: 1; transform: translateY(0); }
+                @keyframes splashFloat {
+                    0% { transform: translateY(0) translateX(0); }
+                    100% { transform: translateY(-20px) translateX(10px); }
                 }
             `}</style>
         </div>

@@ -7,21 +7,13 @@ export default function LeaderboardScreen({ currentUser, onBack }) {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    // Auto-detect production vs development
     const isProduction = window.location.protocol === 'https:';
     const API_URL = import.meta.env.VITE_API_URL || (isProduction
         ? `https://${window.location.hostname.replace('frontend', 'backend')}/api`
         : 'http://localhost:3001/api');
 
-    useEffect(() => {
-        fetchLeaderboard();
-    }, [page]);
-
-    useEffect(() => {
-        if (currentUser?.id) {
-            fetchMyRank();
-        }
-    }, [currentUser?.id]);
+    useEffect(() => { fetchLeaderboard(); }, [page]);
+    useEffect(() => { if (currentUser?.id) fetchMyRank(); }, [currentUser?.id]);
 
     const fetchLeaderboard = async () => {
         setLoading(true);
@@ -32,203 +24,137 @@ export default function LeaderboardScreen({ currentUser, onBack }) {
                 setLeaderboard(data.leaderboard);
                 setTotalPages(data.pagination.pages || 1);
             }
-        } catch (err) {
+        } catch {
             setLeaderboard([
-                { position: 1, username: 'ShadowBlade', elo: 2450, rank: { name: 'Diamond', icon: '💠' }, wins: 342, losses: 89 },
-                { position: 2, username: 'DragonFist', elo: 2380, rank: { name: 'Diamond', icon: '💠' }, wins: 298, losses: 102 },
-                { position: 3, username: 'NightStriker', elo: 2210, rank: { name: 'Platinum', icon: '💎' }, wins: 256, losses: 134 },
+                { position: 1, username: 'ShadowBlade', elo: 2450, rank: 'Diamond', wins: 342, losses: 89 },
+                { position: 2, username: 'DragonFist', elo: 2380, rank: 'Diamond', wins: 298, losses: 102 },
+                { position: 3, username: 'NightStriker', elo: 2210, rank: 'Platinum', wins: 256, losses: 134 },
             ]);
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     };
 
     const fetchMyRank = async () => {
         try {
             const res = await fetch(`${API_URL}/leaderboard/rank/${currentUser.id}`);
-            if (res.ok) {
-                setMyRank(await res.json());
-            }
-        } catch (err) {
-            console.log('Rank unavailable');
-        }
+            if (res.ok) setMyRank(await res.json());
+        } catch { /* rank unavailable */ }
     };
 
-    const getRankDisplay = (rank) => {
-        if (!rank) return { icon: '🥉', name: 'Bronze' };
-        if (typeof rank === 'string') {
-            const ranks = {
-                'Bronze': { icon: '🥉', name: 'Bronze', color: '#cd7f32' },
-                'Silver': { icon: '🥈', name: 'Silver', color: '#c0c0c0' },
-                'Gold': { icon: '🥇', name: 'Gold', color: '#ffd700' },
-                'Platinum': { icon: '💎', name: 'Platinum', color: '#00d4ff' },
-                'Diamond': { icon: '💠', name: 'Diamond', color: '#b9f2ff' },
-                'Master': { icon: '👑', name: 'Master', color: '#ff6b6b' }
-            };
-            return ranks[rank] || { icon: '🥉', name: rank, color: '#cd7f32' };
-        }
-        return rank;
+    const getRankColor = (rank) => {
+        const name = typeof rank === 'string' ? rank : rank?.name || 'Bronze';
+        return { Master: '#fb7185', Diamond: '#67e8f9', Platinum: '#a5b4fc', Gold: '#fbbf24', Silver: '#cbd5e1', Bronze: '#d97706' }[name] || '#d97706';
     };
+    const getRankName = (rank) => typeof rank === 'string' ? rank : rank?.name || 'Bronze';
 
-    const getPositionStyle = (position) => {
-        if (position === 1) return { color: '#ffd700', textShadow: '0 0 15px rgba(255, 215, 0, 0.5)' };
-        if (position === 2) return { color: '#c0c0c0', textShadow: '0 0 15px rgba(192, 192, 192, 0.5)' };
-        if (position === 3) return { color: '#cd7f32', textShadow: '0 0 15px rgba(205, 127, 50, 0.5)' };
-        return { color: 'rgba(255,255,255,0.7)' };
-    };
+    const posColor = (p) => p === 1 ? '#fbbf24' : p === 2 ? '#cbd5e1' : p === 3 ? '#d97706' : 'var(--c-text-dim)';
 
     return (
-        <div className="screen fade-in">
-            <div className="card" style={{ maxWidth: '800px', width: '100%' }}>
+        <div className="screen fade-in" style={{
+            padding: 'var(--sp-4)', paddingTop: '64px',
+            justifyContent: 'flex-start',
+        }}>
+            <div style={{ maxWidth: '700px', width: '100%', margin: '0 auto' }}>
                 {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '8px' }}>🏆</div>
-                    <h2 style={{
-                        fontSize: '2rem',
-                        background: 'linear-gradient(135deg, #ffd700, #ff8c00)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        letterSpacing: '4px'
+                <div style={{ textAlign: 'center', marginBottom: 'var(--sp-6)' }}>
+                    <h1 style={{
+                        fontFamily: 'var(--f-mono)', fontSize: 'clamp(1rem, 4vw, 1.4rem)',
+                        fontWeight: 800, letterSpacing: '4px', color: 'var(--c-amber)',
+                        marginBottom: 'var(--sp-2)',
                     }}>
-                        GLOBAL LEADERBOARD
-                    </h2>
-                    <p style={{
-                        color: 'rgba(255,255,255,0.5)',
-                        fontSize: '0.85rem',
-                        marginTop: '8px'
-                    }}>
-                        🔒 Only Google-verified warriors appear
+                        GLOBAL RANKINGS
+                    </h1>
+                    <p style={{ color: 'var(--c-text-off)', fontSize: '0.75rem', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                        Google-verified warriors only
                     </p>
                 </div>
 
                 {/* My Rank */}
                 {myRank && (
-                    <div style={{
-                        background: myRank.verified
-                            ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.1))'
-                            : 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0.1))',
-                        padding: '20px',
-                        borderRadius: '16px',
-                        marginBottom: '24px',
-                        border: myRank.verified
-                            ? '1px solid rgba(168, 85, 247, 0.3)'
-                            : '1px solid rgba(251, 191, 36, 0.3)',
-                        textAlign: 'center'
-                    }}>
+                    <div className="panel" style={{ marginBottom: 'var(--sp-5)', textAlign: 'center', padding: 'var(--sp-5)' }}>
                         {myRank.verified ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '1.1rem' }}>
-                                    Your Rank: <strong style={{ color: '#a855f7', fontSize: '1.3rem' }}>#{myRank.position}</strong>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--sp-5)', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.9rem', color: 'var(--c-text-dim)' }}>
+                                    Your Rank: <strong style={{ color: 'var(--c-primary-l)', fontSize: '1.2rem' }}>#{myRank.position}</strong>
                                 </span>
-                                <span style={{
-                                    padding: '6px 16px',
-                                    background: 'rgba(168, 85, 247, 0.2)',
-                                    borderRadius: '20px',
-                                    fontSize: '0.9rem'
-                                }}>
-                                    Top {myRank.percentile}%
-                                </span>
-                                <span>
-                                    {getRankDisplay(myRank.rank).icon} {getRankDisplay(myRank.rank).name}
-                                </span>
+                                <span className="badge">Top {myRank.percentile}%</span>
                             </div>
                         ) : (
-                            <span style={{ color: '#fbbf24' }}>
-                                ⚠️ {myRank.message || 'Sign in with Google to appear on the leaderboard'}
+                            <span style={{ color: 'var(--c-amber)', fontSize: '0.85rem' }}>
+                                {myRank.message || 'Sign in with Google to appear on rankings'}
                             </span>
                         )}
                     </div>
                 )}
 
-                {/* Leaderboard Table */}
+                {/* Table */}
                 {loading ? (
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '60px',
-                        color: 'rgba(255,255,255,0.5)'
-                    }}>
-                        <div style={{
-                            fontSize: '2rem',
-                            animation: 'spin 1s linear infinite',
-                            display: 'inline-block'
-                        }}>⚔️</div>
-                        <p style={{ marginTop: '16px' }}>Loading warriors...</p>
+                    <div style={{ textAlign: 'center', padding: 'var(--sp-12)', color: 'var(--c-text-off)' }}>
+                        Loading...
                     </div>
                 ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{
-                            width: '100%',
-                            borderCollapse: 'separate',
-                            borderSpacing: '0 8px'
-                        }}>
+                    <div className="panel" style={{ padding: 'var(--sp-4)', overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr>
-                                    <th style={{
-                                        padding: '12px 16px',
-                                        textAlign: 'left',
-                                        color: '#a855f7',
-                                        fontSize: '0.75rem',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '2px',
-                                        borderBottom: '1px solid rgba(168, 85, 247, 0.2)'
-                                    }}>Rank</th>
-                                    <th style={{ padding: '12px', textAlign: 'left', color: '#a855f7', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>Warrior</th>
-                                    <th style={{ padding: '12px', textAlign: 'center', color: '#a855f7', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>Tier</th>
-                                    <th style={{ padding: '12px', textAlign: 'center', color: '#a855f7', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>ELO</th>
-                                    <th style={{ padding: '12px', textAlign: 'center', color: '#a855f7', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>Record</th>
+                                    {['Rank', 'Player', 'Tier', 'ELO', 'Record'].map(h => (
+                                        <th key={h} style={{
+                                            padding: 'var(--sp-3) var(--sp-4)',
+                                            textAlign: h === 'Rank' || h === 'Player' ? 'left' : 'center',
+                                            color: 'var(--c-text-off)', fontSize: '0.65rem',
+                                            textTransform: 'uppercase', letterSpacing: '2px',
+                                            fontWeight: 700,
+                                            borderBottom: '1px solid var(--c-border)',
+                                        }}>{h}</th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody>
-                                {leaderboard.map((player, idx) => {
-                                    const rankInfo = getRankDisplay(player.rank);
-                                    const posStyle = getPositionStyle(player.position);
-                                    return (
-                                        <tr key={player.position} style={{
-                                            background: player.position <= 3
-                                                ? 'linear-gradient(90deg, rgba(168, 85, 247, 0.1), transparent)'
-                                                : 'rgba(255,255,255,0.03)',
-                                            transition: 'all 0.3s ease'
+                                {leaderboard.map((player) => (
+                                    <tr key={player.position} style={{
+                                        borderBottom: '1px solid var(--c-border)',
+                                        transition: 'background 0.2s',
+                                    }}>
+                                        <td style={{
+                                            padding: 'var(--sp-3) var(--sp-4)',
+                                            fontWeight: 800, fontSize: '1rem',
+                                            color: posColor(player.position),
+                                            fontFamily: 'var(--f-mono)',
                                         }}>
-                                            <td style={{
-                                                padding: '16px',
-                                                borderRadius: '12px 0 0 12px',
-                                                fontWeight: 900,
-                                                fontSize: '1.2rem',
-                                                ...posStyle
-                                            }}>
-                                                {player.position <= 3 ? ['🥇', '🥈', '🥉'][player.position - 1] : `#${player.position}`}
-                                            </td>
-                                            <td style={{ padding: '16px', fontWeight: 600 }}>
-                                                {player.username}
-                                            </td>
-                                            <td style={{
-                                                padding: '16px',
-                                                textAlign: 'center',
-                                                color: rankInfo.color
-                                            }}>
-                                                {rankInfo.icon} {rankInfo.name}
-                                            </td>
-                                            <td style={{
-                                                padding: '16px',
-                                                textAlign: 'center',
-                                                fontWeight: 700,
-                                                fontSize: '1.1rem',
-                                                color: '#fbbf24'
-                                            }}>
-                                                {player.elo}
-                                            </td>
-                                            <td style={{
-                                                padding: '16px',
-                                                textAlign: 'center',
-                                                borderRadius: '0 12px 12px 0'
-                                            }}>
-                                                <span style={{ color: '#22c55e' }}>{player.wins}W</span>
-                                                <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 4px' }}>/</span>
-                                                <span style={{ color: '#ef4444' }}>{player.losses}L</span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                            #{player.position}
+                                        </td>
+                                        <td style={{
+                                            padding: 'var(--sp-3) var(--sp-4)',
+                                            fontWeight: 600, fontSize: '0.875rem',
+                                        }}>
+                                            {player.username}
+                                        </td>
+                                        <td style={{
+                                            padding: 'var(--sp-3) var(--sp-4)',
+                                            textAlign: 'center',
+                                            color: getRankColor(player.rank),
+                                            fontSize: '0.8rem', fontWeight: 600,
+                                        }}>
+                                            {getRankName(player.rank)}
+                                        </td>
+                                        <td style={{
+                                            padding: 'var(--sp-3) var(--sp-4)',
+                                            textAlign: 'center',
+                                            fontWeight: 700, fontSize: '1rem',
+                                            color: 'var(--c-amber)',
+                                            fontFamily: 'var(--f-mono)',
+                                        }}>
+                                            {player.elo}
+                                        </td>
+                                        <td style={{
+                                            padding: 'var(--sp-3) var(--sp-4)',
+                                            textAlign: 'center', fontSize: '0.8rem',
+                                        }}>
+                                            <span style={{ color: 'var(--c-green)' }}>{player.wins}W</span>
+                                            <span style={{ color: 'var(--c-text-off)', margin: '0 4px' }}>/</span>
+                                            <span style={{ color: 'var(--c-red)' }}>{player.losses}L</span>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
@@ -237,53 +163,30 @@ export default function LeaderboardScreen({ currentUser, onBack }) {
                 {/* Pagination */}
                 {totalPages > 1 && (
                     <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '16px',
-                        marginTop: '24px'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: 'var(--sp-4)', marginTop: 'var(--sp-5)',
                     }}>
-                        <button
-                            className="btn"
-                            disabled={page === 1}
-                            onClick={() => setPage(p => p - 1)}
-                            style={{ opacity: page === 1 ? 0.5 : 1 }}
-                        >
-                            ← Previous
+                        <button className="btn2" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                            Prev
                         </button>
                         <span style={{
-                            padding: '10px 20px',
-                            background: 'rgba(168, 85, 247, 0.2)',
-                            borderRadius: '8px'
+                            fontSize: '0.8rem', color: 'var(--c-text-dim)',
+                            fontFamily: 'var(--f-mono)',
                         }}>
-                            Page {page} of {totalPages}
+                            {page} / {totalPages}
                         </span>
-                        <button
-                            className="btn"
-                            disabled={page === totalPages}
-                            onClick={() => setPage(p => p + 1)}
-                            style={{ opacity: page === totalPages ? 0.5 : 1 }}
-                        >
-                            Next →
+                        <button className="btn2" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                            Next
                         </button>
                     </div>
                 )}
 
-                <button
-                    className="btn"
-                    onClick={onBack}
-                    style={{ marginTop: '24px', width: '100%' }}
+                <button className="btn2 btn2--ghost btn2--block" onClick={onBack}
+                    style={{ marginTop: 'var(--sp-5)' }}
                 >
-                    ← Back to Lobby
+                    Back to Hub
                 </button>
             </div>
-
-            <style>{`
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
         </div>
     );
 }

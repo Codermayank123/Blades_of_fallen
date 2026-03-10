@@ -12,6 +12,7 @@ export default function GameScreen({ send, playerId, roomInfo, gameState, onAren
     const [timer, setTimer] = useState(60);
     const [assetsLoaded, setAssetsLoaded] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [showIntro, setShowIntro] = useState(true);
     const [sfxVol, setSfxVol] = useState(80);
     const [musicVol, setMusicVol] = useState(30);
     const [canvasSize, setCanvasSize] = useState({ width: 1024, height: 576 });
@@ -217,6 +218,13 @@ export default function GameScreen({ send, playerId, roomInfo, gameState, onAren
         setMusicVolume(val / 100);
     };
 
+    // Auto-hide intro overlay after a short delay as a fallback
+    useEffect(() => {
+        if (!assetsLoaded || !showIntro) return;
+        const timeout = setTimeout(() => setShowIntro(false), 15000);
+        return () => clearTimeout(timeout);
+    }, [assetsLoaded, showIntro]);
+
     return (
         <div
             ref={containerRef}
@@ -331,6 +339,203 @@ export default function GameScreen({ send, playerId, roomInfo, gameState, onAren
                     <button onClick={toggleMute} className="btn btn-secondary">
                         Toggle Mute
                     </button>
+                </div>
+            )}
+
+            {/* Intro / controls overlay shown before the match starts */}
+            {assetsLoaded && showIntro && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 200,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(0, 0, 0, 0.85)',
+                        padding: '24px',
+                        boxSizing: 'border-box',
+                    }}
+                >
+                    <div
+                        style={{
+                            maxWidth: '700px',
+                            width: '100%',
+                            borderRadius: '16px',
+                            padding: '24px 28px',
+                            background:
+                                'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9))',
+                            boxShadow:
+                                '0 20px 60px rgba(15,23,42,0.9), 0 0 40px rgba(56,189,248,0.35)',
+                            border: '1px solid rgba(148,163,184,0.5)',
+                            color: '#e5e7eb',
+                            fontFamily: 'Cinzel, serif',
+                        }}
+                    >
+                        <h2
+                            style={{
+                                marginTop: 0,
+                                marginBottom: '8px',
+                                fontSize: 'clamp(20px, 3vw, 28px)',
+                                color: '#fbbf24',
+                                textTransform: 'uppercase',
+                                letterSpacing: '4px',
+                                textAlign: 'center',
+                                textShadow:
+                                    '0 0 16px rgba(251,191,36,0.5), 0 0 40px rgba(59,130,246,0.6)',
+                            }}
+                        >
+                            Duel Controls & Rules
+                        </h2>
+                        <p
+                            style={{
+                                marginTop: 0,
+                                marginBottom: '18px',
+                                fontSize: '0.9rem',
+                                textAlign: 'center',
+                                color: 'rgba(226,232,240,0.8)',
+                            }}
+                        >
+                            Learn the controls before you enter the arena. Once you&apos;re ready,
+                            start the match and fight fair.
+                        </p>
+
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                                gap: '18px',
+                                marginBottom: '18px',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    padding: '12px 14px',
+                                    borderRadius: '12px',
+                                    background:
+                                        'radial-gradient(circle at top, rgba(56,189,248,0.25), transparent 70%)',
+                                    border: '1px solid rgba(59,130,246,0.6)',
+                                }}
+                            >
+                                <h3
+                                    style={{
+                                        marginTop: 0,
+                                        marginBottom: '10px',
+                                        fontSize: '0.95rem',
+                                        color: '#bfdbfe',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '2px',
+                                    }}
+                                >
+                                    Player 1 (Left)
+                                </h3>
+                                <ul
+                                    style={{
+                                        listStyle: 'none',
+                                        padding: 0,
+                                        margin: 0,
+                                        fontSize: '0.85rem',
+                                        lineHeight: 1.6,
+                                    }}
+                                >
+                                    <li>
+                                        <strong>W</strong> – Jump
+                                    </li>
+                                    <li>
+                                        <strong>A / D</strong> – Move left / right
+                                    </li>
+                                    <li>
+                                        <strong>Space</strong> – Attack
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div
+                                style={{
+                                    padding: '12px 14px',
+                                    borderRadius: '12px',
+                                    background:
+                                        'radial-gradient(circle at top, rgba(251,191,36,0.18), transparent 70%)',
+                                    border: '1px solid rgba(250,204,21,0.6)',
+                                }}
+                            >
+                                <h3
+                                    style={{
+                                        marginTop: 0,
+                                        marginBottom: '10px',
+                                        fontSize: '0.95rem',
+                                        color: '#facc15',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '2px',
+                                    }}
+                                >
+                                    Player 2 (Right)
+                                </h3>
+                                <ul
+                                    style={{
+                                        listStyle: 'none',
+                                        padding: 0,
+                                        margin: 0,
+                                        fontSize: '0.85rem',
+                                        lineHeight: 1.6,
+                                    }}
+                                >
+                                    <li>
+                                        <strong>↑</strong> – Jump
+                                    </li>
+                                    <li>
+                                        <strong>← / →</strong> – Move left / right
+                                    </li>
+                                    <li>
+                                        <strong>↓</strong> – Attack
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <p
+                            style={{
+                                fontSize: '0.8rem',
+                                marginBottom: '18px',
+                                color: 'rgba(209,213,219,0.8)',
+                                textAlign: 'center',
+                            }}
+                        >
+                            Tip: Both players should be ready before you start. Attacks and movement
+                            are mirrored so that each side has a fair chance to win.
+                        </p>
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                flexWrap: 'wrap',
+                            }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setShowIntro(false)}
+                                style={{
+                                    padding: '10px 32px',
+                                    borderRadius: '999px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontFamily: 'Cinzel, serif',
+                                    fontSize: '0.9rem',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '3px',
+                                    background:
+                                        'linear-gradient(135deg, #fbbf24, #f97316, #ef4444)',
+                                    color: '#0b1120',
+                                    boxShadow:
+                                        '0 0 30px rgba(251,191,36,0.6), 0 0 60px rgba(248,113,113,0.5)',
+                                }}
+                            >
+                                Start Match
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

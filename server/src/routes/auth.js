@@ -92,6 +92,47 @@ router.post('/guest', async (req, res) => {
     }
 });
 
+// Admin login endpoint
+router.post('/admin-login', async (req, res) => {
+    try {
+        const { username, emailOrUsername, password } = req.body;
+        const loginId = emailOrUsername || username;
+
+        if (!loginId || !password) {
+            return res.status(400).json({ error: 'Username and password required' });
+        }
+
+        const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+
+        if (password !== adminPassword) {
+            console.warn(`Admin login failed: wrong password for '${loginId}'`);
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Find admin user by username or email
+        const user = await User.findOne({
+            $or: [{ username: loginId, role: 'admin' }, { email: loginId, role: 'admin' }]
+        });
+        if (!user) {
+            console.warn(`Admin login failed: admin account '${loginId}' not found`);
+            return res.status(401).json({ error: 'Admin account not found. Contact server admin.' });
+        }
+
+        user.lastLogin = new Date();
+        await user.save();
+
+        const token = generateToken(user._id.toString(), user.username);
+
+        res.json({
+            token,
+            user: user.getPublicProfile()
+        });
+    } catch (error) {
+        console.error('Admin login error:', error);
+        res.status(500).json({ error: 'Server error. Please try again.' });
+    }
+});
+
 // Google OAuth with access token (popup flow - more reliable on localhost)
 router.post('/google/token', async (req, res) => {
     try {
