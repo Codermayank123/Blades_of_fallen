@@ -2,8 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { MODE_LABELS } from '../config/brand.js';
 
 const MODE_COLORS = {
-    duel: '#ef4444', bomb_relay: '#FF3D81', territory: '#7B61FF',
-    neon_drift: '#00F5FF', cricket_pro: '#00FF9C',
+    duel:         '#7B2FBE',
+    pixel_code:   '#00FF88',
+    stack_smash:  '#FF6B6B',
+    emoji_escape: '#FFDD00',
+    meme_wars:    '#FF69B4',
+    // legacy — kept for historical match records
+    bug_bounty:   '#EF4444',
+    algo_arena:   '#06B6D4',
+    cipher_clash: '#F59E0B',
+    query_quest:  '#10B981',
 };
 
 const DATE_RANGES = [
@@ -129,29 +137,69 @@ export default function AdminDashboard({ onBack }) {
         return () => clearInterval(interval);
     }, [showWelcome]);
 
-    // Welcome animation overlay
+    // Welcome animation overlay — themed to match main WelcomeScreen
     if (showWelcome) {
+        const welcomeLines = Array.from({ length: 12 }, (_, i) => ({
+            id: i,
+            top: `${8 + i * 8}%`,
+            rotate: i % 3 === 0 ? '0deg' : i % 3 === 1 ? '90deg' : '45deg',
+        }));
+        const welcomeParticles = Array.from({ length: 30 }, (_, i) => ({
+            id: i,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            size: 2 + Math.random() * 4,
+            color: ['var(--c-primary, #8b5cf6)', 'var(--c-cyan, #22d3ee)', 'var(--c-amber, #fbbf24)', 'var(--c-green, #34d399)', 'var(--c-rose, #fb7185)'][i % 5],
+        }));
+
         return (
             <div style={{
                 position: 'fixed', inset: 0, zIndex: 9999,
-                background: 'linear-gradient(135deg, #0a0e27 0%, #1a1145 40%, #0d1b2a 100%)',
+                background: 'linear-gradient(135deg, var(--c-bg, #0a0e27) 0%, var(--c-surface, #1a1145) 40%, var(--c-bg, #0d1b2a) 100%)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
                 opacity: welcomeFading ? 0 : 1,
                 transition: 'opacity 0.8s ease-out',
             }}>
-                {/* Animated background particles */}
-                {[...Array(20)].map((_, i) => (
-                    <div key={i} style={{
-                        position: 'absolute',
-                        width: 4 + Math.random() * 6, height: 4 + Math.random() * 6,
-                        borderRadius: '50%',
-                        background: ['#7B61FF', '#00F5FF', '#FBBF24', '#FF3D81'][i % 4],
-                        opacity: 0.3 + Math.random() * 0.4,
-                        left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
-                        animation: `adminParticle ${3 + Math.random() * 4}s ease-in-out infinite alternate`,
-                        animationDelay: `${Math.random() * 2}s`,
-                    }} />
-                ))}
+                {/* Animated grid lines — same as WelcomeScreen */}
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                    {welcomeLines.map(l => (
+                        <div key={l.id} style={{
+                            position: 'absolute', top: l.top, left: 0, right: 0,
+                            height: '1px',
+                            background: 'linear-gradient(90deg, transparent, var(--c-primary, #8b5cf6), transparent)',
+                            transform: `rotate(${l.rotate})`, transformOrigin: 'center',
+                            opacity: 0.15,
+                            animation: `adminLineIn 1.2s ease-out ${l.id * 0.08}s both`,
+                        }} />
+                    ))}
+                </div>
+
+                {/* Central glow — same as WelcomeScreen */}
+                <div style={{
+                    position: 'absolute',
+                    width: '500px', height: '500px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, rgba(34,211,238,0.05) 50%, transparent 70%)',
+                    filter: 'blur(60px)',
+                    pointerEvents: 'none',
+                    animation: 'adminGlowPulse 2.5s ease-in-out infinite alternate',
+                }} />
+
+                {/* Floating particles — same as WelcomeScreen */}
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                    {welcomeParticles.map(p => (
+                        <div key={p.id} style={{
+                            position: 'absolute', left: p.left, top: p.top,
+                            width: p.size, height: p.size,
+                            borderRadius: '50%',
+                            background: p.color,
+                            boxShadow: `0 0 ${p.size * 3}px ${p.color}66`,
+                            animation: `adminFloat ${3 + Math.random() * 4}s ease-in-out infinite alternate`,
+                            animationDelay: `${Math.random() * 2}s`,
+                        }} />
+                    ))}
+                </div>
 
                 {/* Crown icon */}
                 <div style={{
@@ -159,57 +207,83 @@ export default function AdminDashboard({ onBack }) {
                     marginBottom: '16px',
                     animation: 'adminCrownBounce 2s ease-in-out infinite',
                     filter: 'drop-shadow(0 0 30px rgba(251,191,36,0.6))',
+                    position: 'relative', zIndex: 2,
                 }}>👑</div>
 
-                {/* Welcome text */}
+                {/* Welcome text — using same font as WelcomeScreen title */}
                 <h1 style={{
-                    fontFamily: 'Orbitron, Cinzel, sans-serif',
+                    fontFamily: 'var(--f-mono, Orbitron), sans-serif',
                     fontSize: 'clamp(24px, 5vw, 42px)',
                     fontWeight: 900,
-                    background: 'linear-gradient(135deg, #FBBF24, #F97316, #7B61FF)',
+                    background: 'linear-gradient(135deg, var(--c-primary, #8b5cf6), var(--c-cyan, #22d3ee), var(--c-amber, #fbbf24))',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
                     marginBottom: '8px',
                     textAlign: 'center',
-                    letterSpacing: '4px',
+                    letterSpacing: '6px',
                     textShadow: 'none',
+                    position: 'relative', zIndex: 2,
                 }}>WELCOME, ADMIN</h1>
 
                 <p style={{
-                    color: 'rgba(226,232,240,0.6)',
-                    fontSize: 'clamp(12px, 2vw, 16px)',
+                    fontFamily: 'var(--f-body, Inter), sans-serif',
+                    fontSize: 'clamp(0.7rem, 2vw, 1rem)',
+                    color: 'var(--c-text-off, rgba(226,232,240,0.5))',
+                    letterSpacing: '6px',
+                    textTransform: 'uppercase',
                     marginBottom: '40px',
-                    fontFamily: 'Inter, sans-serif',
-                    letterSpacing: '1px',
-                }}>Initializing Command Center...</p>
+                    position: 'relative', zIndex: 2,
+                }}>Initializing Command Center</p>
 
                 {/* Progress bar */}
                 <div style={{
                     width: 'clamp(200px, 50vw, 360px)', height: '6px',
                     background: 'rgba(255,255,255,0.08)',
                     borderRadius: '3px', overflow: 'hidden',
-                    border: '1px solid rgba(123,97,255,0.2)',
+                    border: '1px solid rgba(139,92,246,0.2)',
+                    position: 'relative', zIndex: 2,
                 }}>
                     <div style={{
                         width: `${welcomeProgress}%`, height: '100%',
-                        background: 'linear-gradient(90deg, #7B61FF, #00F5FF, #FBBF24)',
+                        background: 'linear-gradient(90deg, var(--c-primary, #8b5cf6), var(--c-cyan, #22d3ee), var(--c-amber, #fbbf24))',
                         borderRadius: '3px',
                         transition: 'width 0.05s linear',
-                        boxShadow: '0 0 12px rgba(123,97,255,0.6)',
+                        boxShadow: '0 0 12px rgba(139,92,246,0.6)',
                     }} />
                 </div>
 
                 <div style={{
-                    color: 'rgba(226,232,240,0.4)',
+                    color: 'var(--c-text-off, rgba(226,232,240,0.4))',
                     fontSize: '12px',
                     marginTop: '12px',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--f-mono, monospace)',
+                    position: 'relative', zIndex: 2,
                 }}>{Math.round(welcomeProgress)}%</div>
 
+                {/* Bottom label — same as WelcomeScreen */}
+                <div style={{
+                    position: 'absolute', bottom: '32px',
+                    fontSize: '0.65rem',
+                    color: 'var(--c-text-off, rgba(226,232,240,0.4))',
+                    letterSpacing: '3px',
+                    textTransform: 'uppercase',
+                }}>
+                    ADMIN COMMAND CENTER
+                </div>
+
                 <style>{`
-                    @keyframes adminParticle {
-                        0% { transform: translateY(0) scale(1); opacity: 0.2; }
-                        100% { transform: translateY(-30px) scale(1.3); opacity: 0.5; }
+                    @keyframes adminLineIn {
+                        0% { transform: scaleX(0); opacity: 0; }
+                        100% { opacity: 0.15; }
+                    }
+                    @keyframes adminGlowPulse {
+                        0% { transform: scale(1); opacity: 0.7; }
+                        100% { transform: scale(1.1); opacity: 1; }
+                    }
+                    @keyframes adminFloat {
+                        0% { transform: translateY(0) translateX(0); opacity: 0.3; }
+                        100% { transform: translateY(-25px) translateX(15px); opacity: 0.6; }
                     }
                     @keyframes adminCrownBounce {
                         0%, 100% { transform: translateY(0) rotate(-5deg); }
@@ -330,11 +404,9 @@ export default function AdminDashboard({ onBack }) {
                             gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
                             gap: 'var(--sp-3)', marginBottom: 'var(--sp-6)',
                         }}>
-                            {['duel', 'bomb_relay', 'territory', 'neon_drift', 'cricket_pro'].map((mode, i) => {
+                        {['duel', 'pixel_code', 'stack_smash', 'emoji_escape', 'meme_wars'].map((mode, i) => {
                                 const count = gameBreakdown[mode] || 0;
                                 const color = MODE_COLORS[mode];
-                                const totalM = analytics?.totalMatches || 1;
-                                const pct = totalM > 0 ? ((count / totalM) * 100).toFixed(0) : 0;
                                 return (
                                     <div key={mode} style={{
                                         padding: 'var(--sp-4)',
@@ -345,7 +417,6 @@ export default function AdminDashboard({ onBack }) {
                                         animation: `fadeIn 0.4s ease ${i * 60}ms both`,
                                     }}>
                                         <div style={{
-                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                             marginBottom: 'var(--sp-2)',
                                         }}>
                                             <span style={{
@@ -354,26 +425,11 @@ export default function AdminDashboard({ onBack }) {
                                             }}>
                                                 {MODE_LABELS[mode] || mode}
                                             </span>
-                                            <span style={{
-                                                fontSize: '0.6rem', color: 'var(--c-text-off)',
-                                            }}>{pct}%</span>
                                         </div>
                                         <div style={{
                                             fontFamily: 'var(--f-mono)', fontSize: '1.4rem', fontWeight: 800,
-                                            color: 'var(--c-text)', marginBottom: 'var(--sp-2)',
+                                            color: 'var(--c-text)',
                                         }}>{count}</div>
-                                        {/* Mini bar */}
-                                        <div style={{
-                                            height: '3px', background: 'var(--c-border)', borderRadius: '2px',
-                                            overflow: 'hidden',
-                                        }}>
-                                            <div style={{
-                                                height: '100%', width: `${pct}%`,
-                                                background: color,
-                                                borderRadius: '2px',
-                                                transition: 'width 0.8s ease',
-                                            }} />
-                                        </div>
                                     </div>
                                 );
                             })}
@@ -458,7 +514,7 @@ export default function AdminDashboard({ onBack }) {
 
                             {/* Mode filter */}
                             <div style={{ display: 'flex', gap: '2px', background: 'var(--c-surface)', borderRadius: 'var(--r-md)', border: '1px solid var(--c-border)', overflow: 'hidden' }}>
-                                {['all', 'duel', 'bomb_relay', 'territory', 'neon_drift', 'cricket_pro'].map(mode => (
+                                {['all', 'duel', 'pixel_code', 'stack_smash', 'emoji_escape', 'meme_wars'].map(mode => (
                                     <button
                                         key={mode}
                                         onClick={() => { setModeFilter(mode); setMatchPage(1); }}

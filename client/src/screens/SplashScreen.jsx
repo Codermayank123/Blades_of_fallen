@@ -109,7 +109,7 @@ export default function SplashScreen({ onEnter }) {
                     marginBottom: 'var(--sp-3)',
                     animation: 'fadeIn 1s ease',
                 }}>
-                    NEXUS ARENA
+                    CODE ARENA
                 </h1>
 
                 <p style={{
@@ -120,7 +120,7 @@ export default function SplashScreen({ onEnter }) {
                     marginBottom: 'var(--sp-12)',
                     animation: 'fadeIn 1.5s ease',
                 }}>
-                    Enter the Arena
+                    Code. Battle. Dominate.
                 </p>
 
                 {showButton && (

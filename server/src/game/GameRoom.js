@@ -17,6 +17,8 @@ export class GameRoom {
     constructor(roomCode, creatorId) {
         this.roomCode = roomCode;
         this.creatorId = creatorId;
+        this.gameType = 'duel';
+        this.maxPlayers = 2;
         this.players = new Map(); // odId -> { socket, fighter, ready }
         this.state = ROOM_STATES.WAITING;
         this.tick = 0;
@@ -24,6 +26,8 @@ export class GameRoom {
         this.gameLoop = null;
         this.winner = null;
         this.events = [];
+        this.countdownTimer = null;
+        this.countdownSeconds = 0;
     }
 
     addPlayer(playerId, socket, username, mongoUserId = null) {
@@ -61,26 +65,79 @@ export class GameRoom {
             }
         }
 
-        // If waiting, remove completely
+        // If waiting, remove completely and cancel any countdown
         if (this.state === ROOM_STATES.WAITING) {
             this.players.delete(playerId);
+            this.cancelCountdown();
         }
     }
 
     setReady(playerId) {
         const player = this.players.get(playerId);
-        if (player) {
-            player.ready = true;
+        if (player && this.state === ROOM_STATES.WAITING) {
+            player.ready = !player.ready; // Toggle ready state
             this.checkStart();
         }
     }
 
     checkStart() {
-        if (this.players.size !== 2) return;
+        if (this.players.size !== 2) {
+            this.cancelCountdown();
+            return;
+        }
 
         const allReady = Array.from(this.players.values()).every(p => p.ready);
         if (allReady) {
-            this.startGame();
+            if (!this.countdownTimer) {
+                this.startCountdown();
+            }
+        } else {
+            this.cancelCountdown();
+        }
+    }
+
+    startCountdown() {
+        this.countdownSeconds = 5;
+        this.broadcast({
+            type: 'COUNTDOWN',
+            seconds: this.countdownSeconds,
+            playerCount: this.players.size,
+            maxPlayers: 2,
+            message: `Match starting in ${this.countdownSeconds}s...`,
+        });
+
+        this.countdownTimer = setInterval(() => {
+            this.countdownSeconds--;
+            if (this.countdownSeconds <= 0) {
+                clearInterval(this.countdownTimer);
+                this.countdownTimer = null;
+                this.countdownSeconds = 0;
+                this.startGame();
+                return;
+            }
+            this.broadcast({
+                type: 'COUNTDOWN',
+                seconds: this.countdownSeconds,
+                playerCount: this.players.size,
+                maxPlayers: 2,
+                message: `Match starting in ${this.countdownSeconds}s...`,
+            });
+        }, 1000);
+    }
+
+    cancelCountdown() {
+        if (this.countdownTimer) {
+            clearInterval(this.countdownTimer);
+            this.countdownTimer = null;
+            this.countdownSeconds = 0;
+            // Notify clients countdown was cancelled
+            this.broadcast({
+                type: 'COUNTDOWN',
+                seconds: 0,
+                playerCount: this.players.size,
+                maxPlayers: 2,
+                message: '',
+            });
         }
     }
 
@@ -94,6 +151,7 @@ export class GameRoom {
         // Notify players to load their arenas
         this.broadcast({
             type: MSG.GAME_START,
+            gameType: 'duel',
             players: this.getPlayerStates()
         });
 
@@ -427,7 +485,12 @@ export class GameRoom {
         return {
             roomCode: this.roomCode,
             state: this.state,
+            gameType: 'duel',
+            maxPlayers: 2,
+            host: this.creatorId,
             playerCount: this.players.size,
+            countdown: this.countdownSeconds || 0,
+            countdownMessage: this.countdownSeconds > 0 ? `Match starting in ${this.countdownSeconds}s...` : '',
             players: Array.from(this.players.values()).map(p => {
                 const info = {
                     id: p.odId,

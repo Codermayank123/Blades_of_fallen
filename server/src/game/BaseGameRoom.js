@@ -64,8 +64,8 @@ export class BaseGameRoom {
 
     setReady(playerId) {
         const player = this.players.get(playerId);
-        if (player) {
-            player.ready = true;
+        if (player && this.state === ROOM_STATES.WAITING) {
+            player.ready = !player.ready; // Toggle ready state
             this.checkStart();
         }
     }
@@ -81,10 +81,34 @@ export class BaseGameRoom {
             return;
         }
 
-        // Room is full or only 2-player game — start immediately
-        if (this.players.size >= limits.max || limits.max <= 2) {
+        // Room is full — start with a short countdown
+        if (this.players.size >= limits.max) {
             this.clearFillTimer();
-            this.startGame();
+            this.fillCountdown = 5;
+
+            this.broadcast({
+                type: MSG.COUNTDOWN,
+                seconds: this.fillCountdown,
+                playerCount: this.players.size,
+                maxPlayers: limits.max,
+                message: `Game starting in ${this.fillCountdown}s...`,
+            });
+
+            this.fillTimer = setInterval(() => {
+                this.fillCountdown--;
+                if (this.fillCountdown <= 0) {
+                    this.clearFillTimer();
+                    this.startGame();
+                    return;
+                }
+                this.broadcast({
+                    type: MSG.COUNTDOWN,
+                    seconds: this.fillCountdown,
+                    playerCount: this.players.size,
+                    maxPlayers: limits.max,
+                    message: `Game starting in ${this.fillCountdown}s...`,
+                });
+            }, 1000);
             return;
         }
 
@@ -127,6 +151,21 @@ export class BaseGameRoom {
             this.fillTimer = null;
         }
         this.fillCountdown = 0;
+    }
+
+    /**
+     * Allows the room creator to bypass the fill countdown and start immediately.
+     * Only valid for game types that support solo play (min=1).
+     */
+    handleStartNow(playerId) {
+        // Only the creator can start now
+        if (playerId !== this.creatorId) return;
+        const limits = GAME_PLAYER_LIMITS[this.gameType] || { min: 2, max: 2 };
+        if (limits.min > 1) return; // Solo not supported for this game type
+        if (this.state !== ROOM_STATES.WAITING) return;
+        if (this.players.size === 0) return;
+        this.clearFillTimer();
+        this.startGame();
     }
 
     startGame() {
@@ -394,6 +433,9 @@ export class BaseGameRoom {
             gameType: this.gameType,
             maxPlayers: this.maxPlayers,
             playerCount: this.players.size,
+            host: this.creatorId,
+            countdown: this.fillCountdown || 0,
+            countdownMessage: this.fillCountdown > 0 ? `Game starting in ${this.fillCountdown}s...` : '',
             players: this.getPlayerList()
         };
     }

@@ -93,7 +93,7 @@ export default function WelcomeScreen({ onEnter }) {
         });
     };
 
-    const title = 'NEXUS ARENA';
+    const title = 'CODE ARENA';
     const particles = Array.from({ length: 40 }, (_, i) => ({
         id: i,
         left: `${Math.random() * 100}%`,
@@ -185,7 +185,7 @@ export default function WelcomeScreen({ onEnter }) {
                 marginBottom: '48px',
                 position: 'relative', zIndex: 2,
             }}>
-                MULTIPLAYER GAMING ARENA
+                CODE. BATTLE. DOMINATE.
             </div>
 
             {/* Enter button */}
@@ -220,7 +220,7 @@ export default function WelcomeScreen({ onEnter }) {
                     e.currentTarget.style.transform = 'translateY(0)';
                 }}
             >
-                Enter Arena
+                Enter Arcade
             </button>
 
             {/* Skip hint */}

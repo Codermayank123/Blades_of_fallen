@@ -182,15 +182,26 @@ export default function LoginScreen({ onLogin, connected }) {
 
                 {/* Player / Admin toggle */}
                 <div style={{
-                    display: 'flex', gap: '4px', marginBottom: 'var(--sp-6)',
-                    background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--r-md)', padding: '4px',
+                    display: 'flex', borderRadius: 'var(--r-md)', overflow: 'hidden',
+                    border: '1px solid var(--c-border)', marginBottom: 'var(--sp-6)',
                 }}>
-                    <button onClick={() => setLoginMode('player')} style={tabStyle(loginMode === 'player')}>
-                        Player
-                    </button>
-                    <button onClick={() => setLoginMode('admin')} style={tabStyle(loginMode === 'admin')}>
-                        Admin
-                    </button>
+                    {[
+                        { key: 'player', label: 'Player', color: '#7B2FBE' },
+                        { key: 'admin',  label: 'Admin',  color: '#EF4444' },
+                    ].map(tab => (
+                        <button key={tab.key} onClick={() => setLoginMode(tab.key)} style={{
+                            flex: 1, padding: '10px', border: 'none', cursor: 'pointer',
+                            background: loginMode === tab.key ? `${tab.color}18` : 'transparent',
+                            color: loginMode === tab.key ? tab.color : 'var(--c-text-off)',
+                            fontWeight: 700, fontSize: '0.8rem', letterSpacing: 1,
+                            borderBottom: loginMode === tab.key ? `2px solid ${tab.color}` : '2px solid transparent',
+                            transition: 'all 0.2s',
+                            fontFamily: 'var(--f-body)',
+                        }}>
+                            <span style={{ marginRight: 6 }}>{tab.key === 'player' ? '▶' : '🔐'}</span>
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
 
                 {loginMode === 'player' ? (

@@ -88,7 +88,7 @@ function handleMessage(socket, player, message) {
 
         case MSG.CREATE_ROOM:
         case 'CREATE_ROOM':
-            handleCreateRoom(socket, playerId, player.username, player.mongoUserId, message.gameType);
+            handleCreateRoom(socket, playerId, player.username, player.mongoUserId, message.gameType, message.gameOptions);
             break;
 
         case MSG.JOIN_ROOM:
@@ -97,7 +97,7 @@ function handleMessage(socket, player, message) {
             break;
 
         case 'QUICK_MATCH':
-            handleQuickMatch(socket, playerId, player.username, player.mongoUserId, message.gameType);
+            handleQuickMatch(socket, playerId, player.username, player.mongoUserId, message.gameType, message.gameOptions);
             break;
 
         case MSG.READY:
@@ -129,13 +129,69 @@ function handleMessage(socket, player, message) {
             send(socket, { type: 'ROOM_LIST', rooms: lobby.getAvailableRooms() });
             break;
 
+        case 'START_NOW':
+            handleStartNow(playerId);
+            break;
+
+        case 'CHAT_MESSAGE':
+            handleChatMessage(playerId, player.username, message);
+            break;
+
+        case 'VOICE_JOIN':
+        case 'VOICE_LEAVE':
+        case 'VOICE_OFFER':
+        case 'VOICE_ANSWER':
+        case 'VOICE_ICE':
+            handleVoiceSignal(playerId, message);
+            break;
+
         default:
             console.warn(`Unknown message type: ${type}`);
     }
 }
 
-function handleCreateRoom(socket, playerId, username, mongoUserId, gameType = 'duel') {
-    const room = lobby.createRoom(playerId, gameType);
+function handleChatMessage(playerId, username, message) {
+    const roomCode = lobby.playerRooms.get(playerId);
+    if (!roomCode) return;
+    const room = lobby.getRoom(roomCode);
+    if (!room) return;
+
+    const text = sanitizeString(message.text, 200);
+    if (!text) return;
+
+    room.broadcast({
+        type: 'CHAT_MESSAGE',
+        senderId: playerId,
+        username,
+        text,
+        timestamp: Date.now(),
+    });
+}
+
+function handleVoiceSignal(playerId, message) {
+    const roomCode = lobby.playerRooms.get(playerId);
+    if (!roomCode) return;
+    const room = lobby.getRoom(roomCode);
+    if (!room) return;
+
+    // Relay voice signals to specific target or broadcast
+    if (message.targetId) {
+        const targetPlayer = room.players.get(message.targetId);
+        if (targetPlayer?.socket) {
+            send(targetPlayer.socket, { ...message, senderId: playerId });
+        }
+    } else {
+        // Broadcast to all except sender
+        for (const [id, p] of room.players) {
+            if (id !== playerId && p.socket) {
+                send(p.socket, { ...message, senderId: playerId });
+            }
+        }
+    }
+}
+
+function handleCreateRoom(socket, playerId, username, mongoUserId, gameType = 'duel', gameOptions = {}) {
+    const room = lobby.createRoom(playerId, gameType, gameOptions);
     room.addPlayer(playerId, socket, username, mongoUserId);
 
     send(socket, {
@@ -183,29 +239,29 @@ function handleJoinRoom(socket, playerId, username, roomCode, mongoUserId) {
     });
 }
 
-function handleQuickMatch(socket, playerId, username, mongoUserId, gameType = 'duel') {
+function handleQuickMatch(socket, playerId, username, mongoUserId, gameType = 'duel', gameOptions = {}) {
     // Find available room or create new
     let room = lobby.findAvailableRoom(gameType);
 
     if (!room) {
         // Create new room
-        room = lobby.createRoom(playerId, gameType);
+        room = lobby.createRoom(playerId, gameType, gameOptions);
         room.addPlayer(playerId, socket, username, mongoUserId);
-        // Auto-ready the creator in quick match
-        room.setReady(playerId);
 
+        // Send notification FIRST, then auto-ready
         send(socket, {
             type: MSG.ROOM_CREATED,
             room: room.getInfo()
         });
+
+        // Auto-ready the creator in quick match (only 1 player, won't trigger start)
+        room.setReady(playerId);
     } else {
         // Join existing room
         if (room.addPlayer(playerId, socket, username, mongoUserId)) {
             lobby.playerRooms.set(playerId, room.roomCode);
 
-            // Auto-ready the joining player in quick match
-            room.setReady(playerId);
-
+            // Send notifications FIRST so client has room info before countdown starts
             send(socket, {
                 type: MSG.ROOM_JOINED,
                 room: room.getInfo()
@@ -215,6 +271,9 @@ function handleQuickMatch(socket, playerId, username, mongoUserId, gameType = 'd
                 type: 'PLAYER_JOINED',
                 room: room.getInfo()
             });
+
+            // Auto-ready AFTER notifications (this may trigger countdown)
+            room.setReady(playerId);
 
             // Broadcast ready state so all players see the update
             room.broadcast({
@@ -293,6 +352,18 @@ function handleArenaReady(playerId) {
     // Legacy duel-specific arenaReady
     if (room.arenaReady) {
         room.arenaReady(playerId);
+    }
+}
+
+function handleStartNow(playerId) {
+    const roomCode = lobby.playerRooms.get(playerId);
+    if (!roomCode) return;
+
+    const room = lobby.getRoom(roomCode);
+    if (!room) return;
+
+    if (room.handleStartNow) {
+        room.handleStartNow(playerId);
     }
 }
 

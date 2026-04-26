@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LogoMain } from './GameIcons.jsx';
 
 export default function TopNav({ currentScreen, onNavigate, user }) {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -12,7 +13,7 @@ export default function TopNav({ currentScreen, onNavigate, user }) {
             { id: 'about', label: 'About' },
         ]
         : [
-            { id: 'lobby', label: 'Hub' },
+            { id: 'lobby', label: 'Arcade' },
             { id: 'leaderboard', label: 'Rankings' },
             { id: 'profile', label: 'Profile' },
             { id: 'howtoplay', label: 'How to Play' },
@@ -32,20 +33,24 @@ export default function TopNav({ currentScreen, onNavigate, user }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 height: '52px', padding: '0 var(--sp-5)',
             }}>
-                {/* Logo — text only */}
+                {/* Logo */}
                 <div
                     onClick={() => onNavigate('lobby')}
                     style={{
-                        fontFamily: 'var(--f-mono)',
-                        fontSize: '0.85rem',
-                        fontWeight: 800,
-                        letterSpacing: '3px',
-                        color: 'var(--c-primary-l)',
-                        cursor: 'pointer',
-                        userSelect: 'none',
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        cursor: 'pointer', userSelect: 'none',
                     }}
                 >
-                    NEXUS
+                    <LogoMain />
+                    <span style={{
+                        fontFamily: 'var(--f-mono)',
+                        fontSize: '0.8rem',
+                        fontWeight: 800,
+                        letterSpacing: '2px',
+                        background: 'linear-gradient(135deg, #a855f7, #22d3ee)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                    }}>CODE ARENA</span>
                 </div>
 
                 {/* Desktop links */}

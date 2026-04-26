@@ -113,7 +113,7 @@ export default function ContactScreen({ onBack }) {
                 <button className="btn2 btn2--ghost btn2--block" onClick={onBack}
                     style={{ marginTop: 'var(--sp-4)' }}
                 >
-                    Back to Hub
+                    Back to Arcade
                 </button>
             </div>
         </div>

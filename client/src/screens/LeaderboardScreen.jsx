@@ -184,7 +184,7 @@ export default function LeaderboardScreen({ currentUser, onBack }) {
                 <button className="btn2 btn2--ghost btn2--block" onClick={onBack}
                     style={{ marginTop: 'var(--sp-5)' }}
                 >
-                    Back to Hub
+                    Back to Arcade
                 </button>
             </div>
         </div>

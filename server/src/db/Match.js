@@ -7,7 +7,10 @@ const matchSchema = new mongoose.Schema({
     },
     gameType: {
         type: String,
-        enum: ['duel', 'bomb_relay', 'territory', 'neon_drift', 'cricket_pro'],
+        enum: ['duel', 'pixel_code', 'stack_smash', 'emoji_escape', 'meme_wars',
+               'bug_bounty', 'algo_arena', 'cipher_clash', 'query_quest',
+               'bomb_relay', 'territory', 'neon_drift', 'cricket_pro',
+               'code_quiz', 'bug_hunter', 'code_crash', 'meme_code'],
         default: 'duel'
     },
     players: [{

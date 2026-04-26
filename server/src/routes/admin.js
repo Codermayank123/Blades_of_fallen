@@ -125,7 +125,7 @@ router.get('/analytics', async (req, res) => {
         ]);
 
         // Ensure all 5 game modes appear (even with 0 matches)
-        const allModes = ['duel', 'bomb_relay', 'territory', 'neon_drift', 'cricket_pro'];
+        const allModes = ['duel', 'pixel_code', 'stack_smash', 'emoji_escape', 'meme_wars'];
         const rawMap = {};
         for (const m of matchesByGameRaw) {
             rawMap[m._id] = m.count;

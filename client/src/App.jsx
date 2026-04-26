@@ -12,23 +12,27 @@ import AboutScreen from './screens/AboutScreen'
 import HowToPlayScreen from './screens/HowToPlayScreen'
 import ContactScreen from './screens/ContactScreen'
 import AdminDashboard from './screens/AdminDashboard'
-import BombRelayScreen from './screens/BombRelayScreen'
-import GemHeistScreen from './screens/GemHeistScreen'
-import NeonDriftScreen from './screens/NeonDriftScreen'
-import CricketProScreen from './screens/CricketProScreen'
 import WelcomeScreen from './screens/WelcomeScreen'
+import PixelCodeScreen from './screens/PixelCodeScreen'
+import StackSmashScreen from './screens/StackSmashScreen'
+import EmojiEscapeScreen from './screens/EmojiEscapeScreen'
+import MemeWarsScreen from './screens/MemeWarsScreen'
 import TopNav from './components/TopNav'
+import ChatPanel from './components/ChatPanel'
+import VoicePanel from './components/VoicePanel'
 
 function App() {
-    // Screen routing logic
-    const [screen, setScreenRaw] = useState(() => {
-        // Always start on the welcome screen for both new and returning users.
-        // The welcome screen itself decides whether to send the user to login or lobby.
-        return 'welcome';
-    })
+    // Always start at welcome — never restore game/admin screens from localStorage
+    const [screen, setScreenRaw] = useState('welcome')
     const setScreen = (s) => {
         setScreenRaw(s);
-        localStorage.setItem('currentScreen', s);
+        // Only persist safe nav screens, not game or admin screens
+        const persistable = ['lobby', 'profile', 'leaderboard', 'about', 'howtoplay', 'contact'];
+        if (persistable.includes(s)) {
+            localStorage.setItem('currentScreen', s);
+        } else {
+            localStorage.removeItem('currentScreen');
+        }
     }
     const [username, setUsername] = useState('')
     const [roomInfo, setRoomInfo] = useState(null)
@@ -51,18 +55,14 @@ function App() {
         switch (msg.type) {
             case 'CONNECTED': {
                 setPlayerId(msg.playerId)
-                // Re-send username immediately on connect/reconnect
-                // so server always has the real callsign, not Player_XXXXXX
                 const tok = localStorage.getItem('token');
                 const u = localStorage.getItem('user');
                 if (tok && u) {
                     try {
                         const userData = JSON.parse(u);
                         if (userData?.username) {
-                            // Will be sent after the current render cycle via send
-                            setTimeout(() => {
-                                send({ type: 'SET_USERNAME', username: userData.username, token: tok });
-                            }, 50);
+                            // Send immediately — no setTimeout race condition
+                            send({ type: 'SET_USERNAME', username: userData.username, token: tok });
                         }
                     } catch (e) { /* ignore */ }
                 }
@@ -77,10 +77,10 @@ function App() {
             case 'PLAYER_JOINED':
             case 'PLAYER_READY':
             case 'ROOM_UPDATE':
-                setRoomInfo(msg.room)
+                // Spread to new object so React always re-renders player list
+                setRoomInfo(msg.room ? { ...msg.room } : null)
                 break
             case 'COUNTDOWN':
-                // Fill timer countdown — update room info with countdown state
                 setRoomInfo(prev => prev ? {
                     ...prev,
                     countdown: msg.seconds,
@@ -90,11 +90,8 @@ function App() {
                 } : prev)
                 break
             case 'GAME_START':
-                // Store as both the base gameState AND as lastMessage
-                // so individual game screens can react to GAME_START
                 setGameState({ ...msg, lastMessage: msg })
                 if (msg.gameType) setCurrentGameType(msg.gameType)
-                // Route to correct game screen
                 const gt = msg.gameType || 'duel';
                 if (gt === 'duel') setScreen('game')
                 else setScreen('game_' + gt)
@@ -106,56 +103,25 @@ function App() {
                 setGameState(prev => prev ? { ...prev, timer: msg.timer, timerStarted: true } : prev)
                 break
 
-            // Multi-game message types (pass-through to active game screen)
+            // Coding/fun game message types — forwarded as lastMessage to all game screens
             case 'QUESTION':
             case 'ROUND_START':
             case 'ROUND_END':
+            case 'ROUND_HINT':
             case 'GAME_STATE':
             case 'TURN':
-            case 'TAP_GO':
-            case 'TAP_RESULT':
-            case 'FLIP_RESULT':
             case 'ANSWER_RESULT':
-            case 'SPRINT_TICK':
-            case 'SPRINT_BOOST':
-            case 'BALL_BOWLED':
-            case 'SHOT_RESULT':
-            case 'BATTER_CHANGE':
-            // Bomb Relay Royale
-            case 'BOMB_TICK':
-            case 'BOMB_PASS':
-            case 'BOMB_EXPLODE':
-            case 'BOMB_ROUND':
-            // Territory / Gem Heist Arena
-            case 'TERRITORY_TICK':
-            case 'TERRITORY_CAPTURE':
-            case 'TERRITORY_ABILITY':
-            case 'HEIST_TICK':
-            case 'HEIST_GEM_COLLECT':
-            case 'HEIST_GEM_DEPOSIT':
-            case 'HEIST_GEM_STEAL':
-            case 'HEIST_GOLD_SPAWN':
-            // Neon Drift Arena
-            case 'DRIFT_TICK':
-            case 'DRIFT_BOOST':
-            case 'DRIFT_CHECKPOINT':
-            case 'DRIFT_COLLISION':
-            case 'DRIFT_LAP':
-            case 'DRIFT_FINISH':
-            // Cricket Clash Pro
-            case 'CRICKET_BALL':
-            case 'CRICKET_SHOT':
-            case 'CRICKET_RESULT':
-            case 'CRICKET_CHANGE':
-            case 'CRICKET_OVER':
-            case 'CRICKET_PHASE':
-            case 'CRICKET_BOWL_CHOICE':
-            case 'CRICKET_INNINGS_CHANGE':
+            case 'VOTING_START':
+            case 'AI_JUDGING':
+                setGameState(prev => ({ ...prev, lastMessage: msg }))
+                break
+
+            // Chat messages (also forwarded to game state for ChatPanel)
+            case 'CHAT_MESSAGE':
                 setGameState(prev => ({ ...prev, lastMessage: msg }))
                 break
 
             case 'GAME_OVER':
-                // Pass to game screen FIRST so it can show its own summary
                 setGameState(prev => ({ ...prev, lastMessage: msg }))
                 setGameResult(msg)
                 if (msg.players) {
@@ -164,7 +130,7 @@ function App() {
                 if (msg.winner === playerId) {
                     playSFX('victory');
                 }
-                // Refresh user profile from DB so stats are up to date
+                // Refresh user profile
                 {
                     const tok = localStorage.getItem('token');
                     if (tok) {
@@ -220,8 +186,8 @@ function App() {
         if (token) setAuthToken(token)
         if (userData) setUser(userData)
         send({ type: 'SET_USERNAME', username: name, token })
-
-        // Admin users go to admin dashboard
+        // Clear any stale screen from a previous session
+        localStorage.removeItem('currentScreen')
         if (userData?.role === 'admin') {
             setScreen('admin')
         } else {
@@ -239,18 +205,18 @@ function App() {
         setScreen('login')
     }
 
-    const handleCreateRoom = (gameType = 'duel') => {
+    const handleCreateRoom = (gameType = 'duel', gameOptions = {}) => {
         setCurrentGameType(gameType)
-        send({ type: 'CREATE_ROOM', gameType })
+        send({ type: 'CREATE_ROOM', gameType, gameOptions })
     }
 
     const handleJoinRoom = (roomCode) => {
         send({ type: 'JOIN_ROOM', roomCode })
     }
 
-    const handleQuickMatch = (gameType = 'duel') => {
+    const handleQuickMatch = (gameType = 'duel', gameOptions = {}) => {
         setCurrentGameType(gameType)
-        send({ type: 'QUICK_MATCH', gameType })
+        send({ type: 'QUICK_MATCH', gameType, gameOptions })
     }
 
     const handleReady = () => {
@@ -274,11 +240,27 @@ function App() {
     }
 
     const handleNavigate = (dest) => {
+        const isAdmin = user?.role === 'admin';
+        // Admin auth guard: admins cannot access game screens
+        if (isAdmin && ['lobby', 'game', 'game_pixel_code', 'game_stack_smash', 'game_emoji_escape', 'game_meme_wars', 'howtoplay'].includes(dest)) {
+            setScreen('admin');
+            return;
+        }
+        // Player auth guard: non-admins cannot access admin
+        if (!isAdmin && dest === 'admin') {
+            setScreen('lobby');
+            return;
+        }
         setScreen(dest)
     }
 
-    // Show TopNav on all screens except splash, login, welcome, and active game screens
-    const showNav = !['splash', 'login', 'welcome', 'game', 'game_quiz', 'game_memory', 'game_street_sprint', 'game_cricket_clash', 'game_reaction_tap', 'game_bomb_relay', 'game_territory', 'game_neon_drift', 'game_cricket_pro'].includes(screen);
+    // Active game screens where we hide nav
+    const gameScreens = ['game', 'game_pixel_code', 'game_stack_smash', 'game_emoji_escape', 'game_meme_wars'];
+    const showNav = !['splash', 'login', 'welcome', ...gameScreens].includes(screen);
+    const isInGame = gameScreens.includes(screen);
+
+    // Build gameState with send function for game screens
+    const gameStateWithSend = gameState ? { ...gameState, send } : { send };
 
     return (
         <div className="app">
@@ -293,8 +275,6 @@ function App() {
             {screen === 'welcome' && (
                 <WelcomeScreen onEnter={() => {
                     localStorage.setItem('hasSeenIntro', 'true');
-                    // After the welcome screen, always take the user to the login screen
-                    // so they can choose how to enter (guest or Google), even if a token exists.
                     setScreen('login');
                 }} />
             )}
@@ -308,6 +288,7 @@ function App() {
                 <LobbyScreen
                     username={username}
                     user={user}
+                    playerId={playerId}
                     roomInfo={roomInfo}
                     onCreateRoom={handleCreateRoom}
                     onJoinRoom={handleJoinRoom}
@@ -317,6 +298,8 @@ function App() {
                     onProfile={() => setScreen('profile')}
                     onLeaderboard={() => setScreen('leaderboard')}
                     onLogout={handleLogout}
+                    onNavigate={handleNavigate}
+                    send={send}
                 />
             )}
             {screen === 'game' && (
@@ -328,31 +311,31 @@ function App() {
                     onArenaReady={handleArenaReady}
                 />
             )}
-            {screen === 'game_bomb_relay' && (
-                <BombRelayScreen
+            {screen === 'game_pixel_code' && (
+                <PixelCodeScreen
                     playerId={playerId}
-                    gameState={{ ...gameState, send }}
+                    gameState={gameStateWithSend}
                     onLeave={handlePlayAgain}
                 />
             )}
-            {screen === 'game_territory' && (
-                <GemHeistScreen
+            {screen === 'game_stack_smash' && (
+                <StackSmashScreen
                     playerId={playerId}
-                    gameState={{ ...gameState, send }}
+                    gameState={gameStateWithSend}
                     onLeave={handlePlayAgain}
                 />
             )}
-            {screen === 'game_neon_drift' && (
-                <NeonDriftScreen
+            {screen === 'game_emoji_escape' && (
+                <EmojiEscapeScreen
                     playerId={playerId}
-                    gameState={{ ...gameState, send }}
+                    gameState={gameStateWithSend}
                     onLeave={handlePlayAgain}
                 />
             )}
-            {screen === 'game_cricket_pro' && (
-                <CricketProScreen
+            {screen === 'game_meme_wars' && (
+                <MemeWarsScreen
                     playerId={playerId}
-                    gameState={{ ...gameState, send }}
+                    gameState={gameStateWithSend}
                     onLeave={handlePlayAgain}
                 />
             )}
@@ -390,6 +373,21 @@ function App() {
                     onBack={() => setScreen('lobby')}
                     onLogout={handleLogout}
                 />
+            )}
+
+            {/* Floating Chat & Voice (visible during games and lobby) */}
+            {(isInGame || screen === 'lobby') && roomInfo && (
+                <>
+                    <ChatPanel
+                        gameState={gameStateWithSend}
+                        playerId={playerId}
+                        playerName={username}
+                    />
+                    <VoicePanel
+                        gameState={gameStateWithSend}
+                        playerId={playerId}
+                    />
+                </>
             )}
         </div>
     )

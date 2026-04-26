@@ -11,6 +11,7 @@ import leaderboardRoutes from './routes/leaderboard.js';
 import adminRoutes from './routes/admin.js';
 import contactRoutes from './routes/contact.js';
 import userRoutes from './routes/user.js';
+import questionsRoutes from './routes/questions.js';
 import { getUserFromToken } from './auth/google.js';
 import { User } from './db/User.js';
 
@@ -70,6 +71,7 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/questions', questionsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

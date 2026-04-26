@@ -21,7 +21,13 @@ export default function ResultsScreen({ result, playerId, onPlayAgain }) {
             case 'timeout': return 'Time Up';
             case 'tie': return 'Draw';
             case 'disconnect': return 'Opponent Disconnected';
-            case 'complete': return 'Match Complete';
+            case 'complete':
+            case 'codequiz_complete':
+            case 'bughunter_complete':
+            case 'codecrash_complete':
+            case 'memecode_complete':
+            case 'syntaxspeed_complete':
+                return 'Match Complete';
             case 'abandoned': return 'Match Abandoned';
             default: return 'Match Over';
         }
